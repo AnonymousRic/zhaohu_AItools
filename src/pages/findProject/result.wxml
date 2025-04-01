@@ -1,0 +1,79 @@
+<view class="result-container">
+  <!-- 顶部导航栏 -->
+  <view class="header">
+    <view class="back-button" bindtap="goBack">
+      <image class="back-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzMzMzMzMyI+PHBhdGggZD0iTTIwIDExSDcuODNsNS41OS01LjU5TDEyIDRsLTggOCA4IDggMS40MS0xLjQxTDcuODMgMTNIMjB2LTJ6Ii8+PC9zdmc+" mode="aspectFit"></image>
+    </view>
+    <text class="title">推荐项目</text>
+    <view class="home-button" bindtap="goHome">
+      <image class="home-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzMzMzMzMyI+PHBhdGggZD0iTTEwIDIwdjLTZoNHY2aDV2LThoM0wxMiAzIDIgMTJoM3Y4eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+    </view>
+  </view>
+
+  <!-- 加载中显示 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">正在加载推荐项目...</text>
+  </view>
+
+  <!-- 无结果显示 -->
+  <view class="no-result" wx:elif="{{!projects.length}}">
+    <image class="no-result-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NjY2NjYyI+PHBhdGggZD0iTTE1LjUgMTRoLS43OWwtLjI4LS4yN0M1LjQxIDcuNTkgMTMuNDItLjAxIDIwLjUgNi4zYzMuODggMy4xMyAzLjgzIDguNjgtLjA3IDExLjc5bC4yNy4yOHYuNzlsNSA0Ljk5TDIwLjQ5IDE5bC00Ljk5LTV6bS02IDBDNY21MIDAgMS45Ljc3MiAxNC45LjMyNCA5LjI2Ny41IDcuNTU0Ljc3MiA2IDIuNjYgNi41IDQgNy40NjMgNCA4LjUgNCA5LjQ5NSA0IDEwLjUgMy40ODYgMTAuNSAyLjVzLS45MDUtMi41LTIuNS0yLjVDNi42NzcgMCA1CDEuNTU3IDUgMy41UzYuNjc3IDcgOC41IDcgMTIgNS40NDMgMTIgMy41eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+    <text class="no-result-text">没有找到匹配的项目</text>
+    <text class="no-result-tip">请尝试调整您的搜索条件</text>
+  </view>
+
+  <!-- 项目列表 -->
+  <scroll-view class="project-list" scroll-y enable-flex enhanced show-scrollbar="{{true}}" wx:else>
+    <view class="project-item" wx:for="{{projects}}" wx:key="id">
+      <view class="project-header">
+        <text class="project-title">推荐项目 {{index + 1}}: {{item.name}}</text>
+      </view>
+
+      <view class="project-desc">
+        <text>{{item.description}}</text>
+      </view>
+      
+      <view class="project-info">
+        <view class="info-row">
+          <text class="info-label">投资估算:</text>
+          <text class="info-value">{{item.investment}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">预计回报率:</text>
+          <text class="info-value">{{item.roi}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">回收期:</text>
+          <text class="info-value">{{item.paybackPeriod}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">技术门槛:</text>
+          <text class="info-value">{{item.techLevel}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">适合园区:</text>
+          <text class="info-value">{{item.suitableArea}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">相关政策支持:</text>
+          <text class="info-value">{{item.policySupport}}</text>
+        </view>
+      </view>
+
+      <view class="project-actions">
+        <view class="action-button" bindtap="favoriteProject" data-id="{{item.id}}">
+          <image class="action-icon" src="data:image/svg+xml;base64,{{item.favorited ? 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2YxOTYyOSI+PHBhdGggZD0iTTEyIDE3LjI3TDE4LjE4IDIxbC0xLjY0LTcuMDNMMjIgOS4yNGwtNy4xOS0uNjFMMTIgMiA5LjE5IDguNjMgMiA5LjI0bDUuNDYgNC43M0w1LjgyIDIxeiIvPjwvc3ZnPg==' : 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTIyIDkuMjRsLTcuMTktLjYyTDEyIDIgOS4xOSA4LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMSAxMiAxNy4yNyAxOC4xOCAyMWwtMS42My03LjAzTDIyIDkuMjR6TTEyIDE1LjRsLTMuNzYgMi4yNyAxLTQuMjgtMy4zMi0yLjg4IDQuMzgtLjM4TDEyIDYuMWwxLjcxIDQuMDQgNC4zOC4zOC0zLjMyIDIuODggMSA0LjI4TDEyIDE1LjR6Ii8+PC9zdmc+'}}"/>
+          <text class="action-text">{{item.favorited ? '已收藏' : '收藏'}}</text>
+        </view>
+        <view class="action-button" bindtap="shareProject" data-id="{{item.id}}">
+          <image class="action-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTE4IDE2LjA4Yy0uNzYgMC0xLjQ0LjMtMS45Ni43N0w4LjkxIDEyLjdjLjA1LS4yMy4wOS0uNDYuMDktLjdzLS4wNC0uNDctLjA5LS43bDcuMDUtNC4xMWMuNTQuNSAxLjI1LjgxIDIuMDQuODEgMS42NiAwIDMtMS4zNCAzLTNzLTEuMzQtMy0zLTMtMyAxLjM0LTMgM2MwIC4yNC4wNC40Ny4wOS43TDguMDQgOS44MUM3LjUgOS4zMSA2Ljc5IDkgNiA5Yy0xLjY2IDAtMyAxLjM0LTMgM3MxLjM0IDMgMyAzYy43OSAwIDEuNS0uMzEgMi4wNC0uODFsNy4xMiA0LjE2Yy0uMDUuMjEtLjA4LjQzLS4wOC42NCAwIDEuNjYgMS4zNCAzIDMgM3MzLTEuMzQgMy0zLTEuMzQtMy0zLTN6Ii8+PC9zdmc+" mode="aspectFit"></image>
+          <text class="action-text">分享</text>
+        </view>
+        <view class="action-button view-button" bindtap="viewProjectDetail" data-id="{{item.id}}">
+          <text class="action-text">查看详情</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view> 

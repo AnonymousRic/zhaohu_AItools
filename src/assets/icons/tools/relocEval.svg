@@ -1,0 +1,28 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="100" cy="100" r="90" fill="#9B59B6"/>
+  
+  <!-- 箭头和移动指示 -->
+  <path d="M50 100 H150" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+  
+  <!-- 建筑移动指示 -->
+  <polygon points="130,100 150,85 150,115" fill="#FFFFFF"/>
+  
+  <!-- 建筑A(起点) -->
+  <rect x="45" y="75" width="40" height="50" fill="#FFFFFF" opacity="0.6"/>
+  <rect x="50" y="85" width="10" height="10" fill="#9B59B6"/>
+  <rect x="70" y="85" width="10" height="10" fill="#9B59B6"/>
+  <rect x="50" y="105" width="10" height="10" fill="#9B59B6"/>
+  <rect x="70" y="105" width="10" height="10" fill="#9B59B6"/>
+  
+  <!-- 建筑B(终点) -->
+  <rect x="115" y="75" width="40" height="50" fill="#FFFFFF"/>
+  <rect x="120" y="85" width="10" height="10" fill="#9B59B6"/>
+  <rect x="140" y="85" width="10" height="10" fill="#9B59B6"/>
+  <rect x="120" y="105" width="10" height="10" fill="#9B59B6"/>
+  <rect x="140" y="105" width="10" height="10" fill="#9B59B6"/>
+  
+  <!-- 评估指标 -->
+  <circle cx="100" cy="140" r="20" fill="#FFFFFF"/>
+  <text x="86" y="147" font-family="Arial" font-size="24" font-weight="bold" fill="#9B59B6">↑</text>
+</svg> 

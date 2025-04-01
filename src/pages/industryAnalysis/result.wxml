@@ -1,0 +1,100 @@
+<view class="result-container">
+  <!-- 标题栏 -->
+  <view class="header">
+    <view class="navigation">
+      <view class="back-button" bindtap="goBack">
+        <image class="back-icon" src="/assets/icons/back.svg" mode="aspectFit"></image>
+      </view>
+      <text class="title">产业链分析</text>
+    </view>
+    <view class="actions">
+      <button class="save-button" bindtap="saveToFavorites">保存分析</button>
+    </view>
+  </view>
+
+  <!-- 加载中状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载分析结果中...</text>
+  </view>
+
+  <!-- 无结果状态 -->
+  <view class="no-result" wx:elif="{{!analysisData}}">
+    <image class="no-result-image" src="/assets/icons/no_result.png" mode="aspectFit"></image>
+    <text class="no-result-text">暂无分析数据</text>
+    <view class="action-button" bindtap="goBack">返回聊天</view>
+  </view>
+
+  <!-- 分析结果展示 -->
+  <scroll-view wx:else class="result-list" scroll-y enhanced show-scrollbar="{{true}}">
+    <!-- 产业概况 -->
+    <view class="analysis-section">
+      <view class="section-header">
+        <text class="section-title">产业概况</text>
+      </view>
+      <view class="section-content">
+        <text class="overview-text">{{analysisData.overview}}</text>
+      </view>
+    </view>
+
+    <!-- 上游分析 -->
+    <view class="analysis-section">
+      <view class="section-header">
+        <text class="section-title">上游分析</text>
+      </view>
+      <view class="section-content">
+        <text class="upstream-text">{{analysisData.upstream}}</text>
+        <view class="item-list" wx:if="{{analysisData.upstreamItems.length > 0}}">
+          <view class="analysis-item" wx:for="{{analysisData.upstreamItems}}" wx:key="name" bindtap="viewDetails" data-index="{{index}}">
+            <view class="item-info">
+              <text class="item-name">{{item.name}}</text>
+              <text class="item-desc">{{item.description}}</text>
+            </view>
+            <image class="arrow-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2JkYmRiZCI+PHBhdGggZD0iTTguNTkgMTYuNTlMMTMuMTcgMTIgOC41OSA3LjQxIDEwIDZsNiA2LTYgNi0xLjQxLTEuNDF6Ii8+PC9zdmc+" mode="aspectFit"></image>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 下游分析 -->
+    <view class="analysis-section">
+      <view class="section-header">
+        <text class="section-title">下游分析</text>
+      </view>
+      <view class="section-content">
+        <text class="downstream-text">{{analysisData.downstream}}</text>
+        <view class="item-list" wx:if="{{analysisData.downstreamItems.length > 0}}">
+          <view class="analysis-item" wx:for="{{analysisData.downstreamItems}}" wx:key="name" bindtap="viewDetails" data-index="{{index}}">
+            <view class="item-info">
+              <text class="item-name">{{item.name}}</text>
+              <text class="item-desc">{{item.description}}</text>
+            </view>
+            <image class="arrow-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2JkYmRiZCI+PHBhdGggZD0iTTguNTkgMTYuNTlMMTMuMTcgMTIgOC41OSA3LjQxIDEwIDZsNiA2LTYgNi0xLjQxLTEuNDF6Ii8+PC9zdmc+" mode="aspectFit"></image>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 趋势分析 -->
+    <view class="analysis-section">
+      <view class="section-header">
+        <text class="section-title">发展趋势</text>
+      </view>
+      <view class="section-content">
+        <text class="trend-text">{{analysisData.trend}}</text>
+      </view>
+    </view>
+
+    <!-- 底部操作栏 -->
+    <view class="action-bar">
+      <view class="action-item" bindtap="favoriteAnalysis">
+        <image class="action-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzE5NzZEMiI+PHBhdGggZD0iTTE3IDN2MTguOTdMLTUuOTkgMTIgMTcgM3pNNyA3IFY1SDVWMTlINlYxM0gxMHYyaDJWMTFINFY3SDdaIi8+PC9zdmc+" mode="aspectFit"></image>
+        <text class="action-text">收藏</text>
+      </view>
+      <view class="action-item" bindtap="shareAnalysis">
+        <image class="action-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzE5NzZEMiI+PHBhdGggZD0iTTE4IDE2LjA4Yy0uNzYgMC0xLjQ0LjMtMS45Ni43N0w4LjkxIDEyLjdjLjA1LS4yMy4wOS0uNDYuMDktLjdzLS4wNC0uNDctLjA5LS43bDcuMDUtNC4xMWMuNTQuNS4yNSAxLTEuOTYgMS43N0ExLjk5IDEuOTkgMCAwIDAgMTggNC41QzE4IDMuMTIgMTYuODggMiAxNS41IDJTMTMgMy4xMiAxMyA0LjVjMCAuMjQuMDQuNDcuMDkuN0w2LjA0IDkuODFhMi4wOTMgMi4wOTMgMCAwIDAtMS45Ni0xLjMxIDIuMTIgMi4xMiAwIDAgMCAwIDQuMjRjLjc2IDAgMS40NC0uMyAxLjk2LS43N2w3LjEyIDQuMTZjLS4wNS4yMS0uMDguNDMtLjA4LjY3IDAgMS4zMyAxLjA4IDIuNSAyLjQyIDIuNXMyLjQyLTEuMTIgMi40Mi0yLjVjMC0xLjQ4LTEuMDktMi41LTIuNDItMi41eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+        <text class="action-text">分享</text>
+      </view>
+    </view>
+  </scroll-view>
+</view> 

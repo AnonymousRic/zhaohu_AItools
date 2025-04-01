@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "custom-tabbar": "../../components/common/custom-tabbar/custom-tabbar"
+  },
+  "navigationStyle": "custom",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#F5F5F5"
+} 

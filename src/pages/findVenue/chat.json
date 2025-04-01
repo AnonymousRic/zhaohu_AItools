@@ -1,0 +1,7 @@
+{
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "chat-page": "../../components/business/chat-page/chat-page"
+  }
+} 

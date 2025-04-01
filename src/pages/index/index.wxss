@@ -1,0 +1,254 @@
+/**index.wxss**/
+page {
+  height: 100vh;
+  background-color: #f5f5f5;
+  overflow: hidden;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.scrollarea {
+  flex: 1;
+  height: 100vh;
+  padding-top: 5rpx; /* 再减少5rpx */
+  padding-bottom: 110rpx; /* 为底部tabBar留出空间 */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 30rpx;
+  box-sizing: border-box;
+}
+
+.header {
+  padding: calc(env(safe-area-inset-top) + 25rpx) 0 12rpx; /* 再减少5rpx */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+@media screen and (max-height: 700px) {
+  .header {
+    padding-top: calc(env(safe-area-inset-top) + 15rpx); /* 再减少5rpx */
+  }
+}
+
+@media screen and (min-height: 800px) {
+  .header {
+    padding-top: calc(env(safe-area-inset-top) + 35rpx); /* 再减少5rpx */
+  }
+}
+
+.title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+.section {
+  margin-top: 40rpx;
+  margin-bottom: 30rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
+  padding: 25rpx;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 24rpx;
+  display: block;
+  position: relative;
+  padding-left: 20rpx;
+}
+
+.section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8rpx;
+  height: 32rpx;
+  background-color: #1976D2;
+  border-radius: 4rpx;
+}
+
+.tool-item {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+}
+
+.tool-item:active {
+  transform: scale(0.98);
+}
+
+.tool-icon-container {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.tool-icon-container.blue {
+  background-color: rgba(25, 118, 210, 0.1);
+}
+
+.tool-icon-container.green {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.tool-icon-container.orange {
+  background-color: rgba(255, 152, 0, 0.1);
+}
+
+.tool-icon-container.purple {
+  background-color: rgba(156, 39, 176, 0.1);
+}
+
+.tool-icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.tool-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 8rpx;
+}
+
+.tool-desc {
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.4;
+}
+
+.arrow-icon {
+  width: 30rpx;
+  height: 30rpx;
+  margin-left: 20rpx;
+}
+
+/* 历史记录样式 */
+.history-list {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 20rpx 30rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.history-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background-color: #1976D2;
+  margin-top: 12rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.history-content {
+  flex: 1;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.history-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333333;
+}
+
+.history-time {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 加载中和空状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 6rpx solid #f3f3f3;
+  border-top: 6rpx solid #1976D2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 26rpx;
+  color: #999999;
+}
+
+.empty-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 0;
+  background-color: #ffffff;
+  border-radius: 16rpx;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  color: #999999;
+  text-align: center;
+}

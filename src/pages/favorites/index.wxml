@@ -1,0 +1,32 @@
+<!-- favorites/index.wxml -->
+<view class="page">
+  <view class="scrollarea">
+    <view class="container">
+      <view class="header">
+        <text class="title">我的收藏</text>
+      </view>
+      
+      <view class="favorite-list" wx:if="{{favoriteList.length > 0}}">
+        <view class="favorite-item" wx:for="{{favoriteList}}" wx:key="id" bindtap="navigateToDetail" data-id="{{item.id}}">
+          <view class="favorite-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjMTk3NkQyIj48cGF0aCBkPSJNMTcgM0gxMWw2IDZWM002LjgzIDl6TTExLjk5IDI0TDguNDMgMTguNzRDNy45NiAxOC4xMSA3LjQ5IDE3LjU5IDcuNSAxMy4yNFY1LjM4TC45OSA5LjI0TDkuMzUgMjMuMDdsLTIuMzQtMS45NkwxMiAxNGw0Ljk5IDlMMTEuOTkgMjR6Ii8+PC9zdmc+"></image>
+          </view>
+          <view class="favorite-content">
+            <view class="favorite-title">{{item.title}}</view>
+            <view class="favorite-type">{{item.type}}</view>
+            <view class="favorite-desc">{{item.description}}</view>
+          </view>
+          <view class="arrow-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjYmRiZGJkIj48cGF0aCBkPSJNOC41OSAxNi41OUwxMCAxNWw1LTUtNS01LTEuNDEgMS40MUw4LjE3IDEwbC01LjU4IDUuNTkgNiA2IDEwLTEwLTEwLTEwLTIuNDEgMi40MUw3LjU5IDV6Ii8+PC9zdmc+"></image>
+          </view>
+        </view>
+      </view>
+      
+      <view class="empty-container" wx:else>
+        <image class="empty-image" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iMjQwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNlMGUwZTAiPjxwYXRoIGQ9Ik0xNCAyMmwtMi0ybC0yIDJoLTR2LTRsMi0ybC0yLTJ2LTRoNGwyLTJsMiAyaDR2NGwtMiAybDIgMnY0aC00ek0xNiA2aC0yLjVsMy0zLTV2MmgtNnYyaC0ydjUuNWwxLTFsLTMgM3YtNy41aDJ2LTJoNnYtMmwxIDFsMi0yaDIuNXoiLz48L3N2Zz4="></image>
+        <text class="empty-text">暂无收藏内容</text>
+      </view>
+    </view>
+  </view>
+  <custom-tabbar activeTab="favorites"></custom-tabbar>
+</view> 

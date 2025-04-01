@@ -1,0 +1,369 @@
+/* pages/relocEval/result.wxss */
+page {
+  height: 100%;
+  background-color: #f7f7f7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.result-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* 头部样式 */
+.header {
+  padding: calc(env(safe-area-inset-top, 44px) + 10rpx) 30rpx 20rpx;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+@media screen and (max-height: 700px) {
+  .header {
+    padding-top: calc(env(safe-area-inset-top, 20px) + 10rpx);
+  }
+}
+
+@media screen and (min-height: 800px) {
+  .header {
+    padding-top: calc(env(safe-area-inset-top, 44px) + 20rpx);
+  }
+}
+
+.back-button, .home-button {
+  width: 70rpx;
+  height: 70rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.back-button:active, .home-button:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.back-icon, .home-icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+.title {
+  flex: 1;
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+/* 加载中样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 70vh;
+}
+
+.spinner {
+  width: 120rpx;
+  height: 120rpx;
+  border: 10rpx solid #f3f3f3;
+  border-top: 10rpx solid #1976D2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 40rpx;
+  font-size: 30rpx;
+  color: #666666;
+}
+
+/* 空结果样式 */
+.empty-result {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 70vh;
+  padding: 0 60rpx;
+}
+
+.empty-icon {
+  width: 200rpx;
+  height: 200rpx;
+  margin-bottom: 40rpx;
+}
+
+.empty-text {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+.empty-subtext {
+  font-size: 28rpx;
+  color: #999999;
+  text-align: center;
+  margin-bottom: 60rpx;
+}
+
+/* 结果内容样式 */
+.result-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30rpx 30rpx calc(env(safe-area-inset-bottom, 0px) + 40rpx);
+}
+
+/* 卡片通用样式 */
+.card {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 40rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 30rpx;
+  position: relative;
+  padding-left: 20rpx;
+}
+
+.card-title:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8rpx;
+  width: 8rpx;
+  height: 32rpx;
+  background-color: #1976D2;
+  border-radius: 4rpx;
+}
+
+/* 企业信息卡片样式 */
+.company-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+
+.info-label {
+  width: 160rpx;
+  color: #666666;
+  font-size: 28rpx;
+}
+
+.info-value {
+  flex: 1;
+  color: #333333;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+/* 总体评估卡片样式 */
+.score-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0 40rpx;
+  border-bottom: 1rpx solid #eeeeee;
+  margin-bottom: 30rpx;
+}
+
+.overall-score {
+  text-align: center;
+}
+
+.score-value {
+  font-size: 60rpx;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 10rpx;
+}
+
+.score-label {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.score-breakdown {
+  display: flex;
+}
+
+.sub-score {
+  text-align: center;
+  margin-left: 60rpx;
+}
+
+.sub-score-value {
+  font-size: 40rpx;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 10rpx;
+}
+
+.sub-score-label {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+.conclusion {
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.6;
+}
+
+/* 因素分析卡片样式 */
+.factor-section {
+  margin-bottom: 40rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+.factor-item {
+  background-color: #f9f9f9;
+  border-radius: 12rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.factor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.factor-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.factor-score {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.factor-type {
+  font-size: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.factor-desc {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.5;
+}
+
+/* 建议卡片样式 */
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestion-item {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+
+.suggestion-number {
+  width: 40rpx;
+  height: 40rpx;
+  background-color: #1976D2;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.suggestion-content {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.5;
+}
+
+/* 风险提示卡片样式 */
+.risks-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.risk-item {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+
+.risk-icon {
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.risk-content {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.5;
+}
+
+/* 底部按钮样式 */
+.action-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40rpx;
+  margin-bottom: 40rpx;
+}
+
+.action-button {
+  flex: 1;
+  margin: 0 10rpx;
+  font-size: 28rpx;
+  padding: 20rpx 0;
+  border-radius: 10rpx;
+  line-height: 1.5;
+}
+
+.action-button.primary {
+  background-color: #1976D2;
+  color: white;
+  border: none;
+}
+
+.action-button.outline {
+  background-color: white;
+  color: #1976D2;
+  border: 1rpx solid #1976D2;
+} 

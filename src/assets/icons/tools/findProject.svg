@@ -1,0 +1,14 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="100" cy="100" r="90" fill="#4B89DC"/>
+  
+  <!-- 项目文件夹 -->
+  <path d="M50 70H150C155 70 160 75 160 80V140C160 145 155 150 150 150H50C45 150 40 145 40 140V80C40 75 45 70 50 70Z" fill="#FFFFFF"/>
+  
+  <!-- 文件夹顶部 -->
+  <path d="M60 70V60C60 55 65 50 70 50H90C95 50 100 55 100 60V70" fill="#FFFFFF"/>
+  
+  <!-- 搜索图标 -->
+  <circle cx="110" cy="110" r="25" fill="none" stroke="#4B89DC" stroke-width="8"/>
+  <line x1="127" y1="127" x2="140" y2="140" stroke="#4B89DC" stroke-width="8" stroke-linecap="round"/>
+</svg> 

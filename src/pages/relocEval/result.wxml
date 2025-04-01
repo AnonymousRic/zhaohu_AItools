@@ -1,0 +1,155 @@
+<view class="result-container">
+  <view class="header">
+    <view class="back-button" bindtap="goBack">
+      <image class="back-icon" src="/assets/icons/back.svg" mode="aspectFit"></image>
+    </view>
+    <text class="title">评估报告</text>
+    <view class="home-button" bindtap="goToHome">
+      <image class="home-icon" src="/assets/icons/home.svg" mode="aspectFit"></image>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="spinner"></view>
+    <view class="loading-text">正在生成评估报告...</view>
+  </view>
+
+  <!-- 没有评估结果 -->
+  <view class="empty-result" wx:elif="{{!evalResults}}">
+    <image class="empty-icon" src="/assets/icons/no_data.svg" mode="aspectFit"></image>
+    <view class="empty-text">暂无评估数据</view>
+    <view class="empty-subtext">请先在对话中完成迁址动力评估</view>
+    <button class="action-button primary" bindtap="backToChat">返回对话</button>
+  </view>
+
+  <!-- 评估结果内容 -->
+  <scroll-view class="result-content" scroll-y="true" wx:else>
+    <!-- 企业信息卡片 -->
+    <view class="card company-card">
+      <view class="card-title">企业基本信息</view>
+      <view class="company-info">
+        <view class="info-row">
+          <view class="info-label">企业名称</view>
+          <view class="info-value">{{evalResults.company_name || '未指定'}}</view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">所属行业</view>
+          <view class="info-value">{{evalResults.industry || '未指定'}}</view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">当前位置</view>
+          <view class="info-value">{{evalResults.current_location || '未指定'}}</view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">目标位置</view>
+          <view class="info-value">{{evalResults.target_location || '未指定'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 总体评估卡片 -->
+    <view class="card summary-card">
+      <view class="card-title">总体评估</view>
+      <view class="score-container">
+        <view class="overall-score">
+          <view class="score-value" style="color: {{getScoreColor(evalResults.overall_score)}}">
+            {{evalResults.overall_score || '0'}}/10
+          </view>
+          <view class="score-label">迁址动力指数</view>
+        </view>
+        <view class="score-breakdown">
+          <view class="sub-score">
+            <view class="sub-score-value" style="color: {{getScoreColor(evalResults.push_score)}}">
+              {{evalResults.push_score || '0'}}/10
+            </view>
+            <view class="sub-score-label">推力指数</view>
+          </view>
+          <view class="sub-score">
+            <view class="sub-score-value" style="color: {{getScoreColor(evalResults.pull_score)}}">
+              {{evalResults.pull_score || '0'}}/10
+            </view>
+            <view class="sub-score-label">拉力指数</view>
+          </view>
+        </view>
+      </view>
+      <view class="conclusion">{{evalResults.conclusion || '暂无评估结论'}}</view>
+    </view>
+
+    <!-- 详细因素分析 -->
+    <view class="card factors-card">
+      <view class="card-title">迁址因素分析</view>
+      
+      <!-- 推力因素 -->
+      <view class="factor-section">
+        <view class="section-title">推力因素（当前位置的推动力）</view>
+        <block wx:for="{{evalResults.push_factors}}" wx:key="name">
+          <view class="factor-item">
+            <view class="factor-header">
+              <view class="factor-name">{{item.name}}</view>
+              <view class="factor-score" style="color: {{getScoreColor(item.score)}}">
+                {{item.score}}/10
+              </view>
+            </view>
+            <view class="factor-type" style="color: {{item.type === 'positive' ? scoreColors.high : (item.type === 'negative' ? scoreColors.low : scoreColors.medium)}}">
+              {{getFactorTypeText(item.type)}}
+            </view>
+            <view class="factor-desc">{{item.description}}</view>
+          </view>
+        </block>
+      </view>
+      
+      <!-- 拉力因素 -->
+      <view class="factor-section">
+        <view class="section-title">拉力因素（目标位置的吸引力）</view>
+        <block wx:for="{{evalResults.pull_factors}}" wx:key="name">
+          <view class="factor-item">
+            <view class="factor-header">
+              <view class="factor-name">{{item.name}}</view>
+              <view class="factor-score" style="color: {{getScoreColor(item.score)}}">
+                {{item.score}}/10
+              </view>
+            </view>
+            <view class="factor-type" style="color: {{item.type === 'positive' ? scoreColors.high : (item.type === 'negative' ? scoreColors.low : scoreColors.medium)}}">
+              {{getFactorTypeText(item.type)}}
+            </view>
+            <view class="factor-desc">{{item.description}}</view>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 建议 -->
+    <view class="card suggestions-card">
+      <view class="card-title">迁址建议</view>
+      <view class="suggestions-list">
+        <block wx:for="{{evalResults.suggestions}}" wx:key="index">
+          <view class="suggestion-item">
+            <view class="suggestion-number">{{index + 1}}</view>
+            <view class="suggestion-content">{{item}}</view>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 风险提示 -->
+    <view class="card risks-card" wx:if="{{evalResults.risks && evalResults.risks.length > 0}}">
+      <view class="card-title">风险提示</view>
+      <view class="risks-list">
+        <block wx:for="{{evalResults.risks}}" wx:key="index">
+          <view class="risk-item">
+            <view class="risk-icon">⚠️</view>
+            <view class="risk-content">{{item}}</view>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 评估报告底部操作按钮 -->
+    <view class="action-buttons">
+      <button class="action-button outline" bindtap="restartEvaluation">重新评估</button>
+      <button class="action-button outline" bindtap="shareResults">分享报告</button>
+      <button class="action-button primary" bindtap="exportReport">导出PDF</button>
+    </view>
+  </scroll-view>
+</view> 

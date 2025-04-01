@@ -1,0 +1,1 @@
+<chat-page id="chatPage" tool-config="{{toolConfig}}"></chat-page> 

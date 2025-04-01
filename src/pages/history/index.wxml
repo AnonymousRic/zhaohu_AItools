@@ -1,0 +1,45 @@
+<!-- history/index.wxml -->
+<view class="container">
+  <view class="header">
+    <text class="title">使用历史</text>
+    <view class="filter-tabs">
+      <view class="tab {{filterType === 'all' ? 'active' : ''}}" bindtap="setFilter" data-type="all">全部</view>
+      <view class="tab {{filterType === 'chat' ? 'active' : ''}}" bindtap="setFilter" data-type="chat">对话</view>
+      <view class="tab {{filterType === 'tool' ? 'active' : ''}}" bindtap="setFilter" data-type="tool">工具</view>
+    </view>
+    <view class="clear-button" bindtap="showClearConfirm">
+      <text>清空历史</text>
+    </view>
+  </view>
+  
+  <scroll-view scroll-y="true" enable-flex class="history-list" enhanced show-scrollbar="{{false}}" refresher-enabled="{{true}}" refresher-triggered="{{isRefreshing}}" bindrefresherrefresh="onRefresh">
+    <view wx:if="{{isLoading}}" class="loading-container">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
+    
+    <block wx:elif="{{historyList.length > 0}}">
+      <view class="history-item" wx:for="{{historyList}}" wx:key="id" bindtap="navigateTo" data-url="{{item.url}}" data-id="{{item.id}}">
+        <view class="history-avatar">
+          <image class="avatar-image" 
+            src="{{item.type === 'chat' ? '/assets/icons/chat.svg' : item.avatarUrl || '/assets/icons/tool.svg'}}" 
+            mode="aspectFill"></image>
+        </view>
+        <view class="history-content">
+          <view class="history-header">
+            <text class="history-title">{{item.title}}</text>
+            <text class="history-time">{{item.time}}</text>
+          </view>
+          <text class="history-description">{{item.description}}</text>
+        </view>
+      </view>
+    </block>
+    
+    <view wx:else class="empty-container">
+      <image class="empty-icon" src="/assets/icons/empty.svg" mode="aspectFit" />
+      <text class="empty-text">暂无历史记录</text>
+    </view>
+  </scroll-view>
+</view>
+
+<custom-tabbar activeTab="history"></custom-tabbar> 

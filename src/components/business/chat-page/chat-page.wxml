@@ -1,0 +1,97 @@
+<view class="chat-container">
+  <!-- 标题栏 -->
+  <view class="header">
+    <view class="back-button" bindtap="goBack">
+      <image class="back-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzMzMzMzMyI+PHBhdGggZD0iTTIwIDExSDcuODNsNS41OS01LjU5TDEyIDRsLTggOCA4IDggMS40MS0xLjQxTDcuODMgMTNIMjB2LTJ6Ii8+PC9zdmc+" mode="aspectFit"></image>
+    </view>
+    <text class="title">{{toolConfig.title}}</text>
+    <view class="clear-history" bindtap="clearChatHistory">
+      <image class="clear-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTE5IDYuNDFMMTcuNTkgNSAxMiAxMC41OSA2LjQxIDUgNSA2LjQxIDEwLjU5IDEyIDUgMTcuNTkgNi40MSAxOSAxMiAxMy40MSAxNy41OSAxOSAxOS4wMCAxNy41OSAxMy40MSAxMiAxOSA2LjQxeiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+    </view>
+  </view>
+
+  <!-- 消息列表 -->
+  <scroll-view class="message-list" scroll-y enable-flex enhanced show-scrollbar="{{false}}" id="message-container" scroll-into-view="{{scrollToView}}" bindtap="onPageTap">
+    <view class="messages-container" data-role="message-area">
+      <block wx:for="{{messages}}" wx:key="id">
+        <view class="message {{item.type === 'user' ? 'user-message' : 'system-message'}}" id="msg_{{item.id}}">
+          <view class="message-avatar">
+            <image class="avatar-image" src="{{item.type === 'user' ? '/assets/icons/user_avatar.svg' : toolConfig.avatarPath}}" mode="aspectFill"></image>
+          </view>
+          <view class="message-content">
+            <view class="message-text" bindlongpress="copyMessageText" data-content="{{item.content}}">
+              <rich-text nodes="{{textFormat.formatBoldText(item.content)}}"></rich-text>
+            </view>
+            <view class="message-time">{{item.time}}</view>
+            <view wx:if="{{item.isAction}}" class="action-button" catchtap="onActionTap" data-content="{{item.content}}">
+              {{item.content}}
+            </view>
+            <!-- 推荐卡片区域 -->
+            <view wx:if="{{item.recommendations && item.recommendations.length > 0}}" class="recommendation-cards">
+              <block wx:for="{{item.recommendations}}" wx:for-item="rec" wx:key="index">
+                <view class="recommendation-card">
+                  <view class="rec-title">{{rec.title}}</view>
+                  <view class="rec-content">{{rec.content}}</view>
+                </view>
+              </block>
+            </view>
+          </view>
+        </view>
+      </block>
+      
+      <!-- 加载中指示器 -->
+      <view class="loading-indicator" wx:if="{{loading}}">
+        <view class="dot dot1"></view>
+        <view class="dot dot2"></view>
+        <view class="dot dot3"></view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 输入框区域 -->
+  <view class="input-container {{isKeyboardShow ? 'keyboard-show' : ''}}" style="{{keyboardTransformStyle}}">
+    <view class="input-box">
+      <textarea 
+        class="message-input {{isKeyboardShow ? 'input-focused' : ''}}"
+        value="{{inputValue}}" 
+        bindinput="onInputChange" 
+        bindfocus="onInputFocus"
+        bindblur="onInputBlur"
+        bindconfirm="sendMessage"
+        confirm-type="send" 
+        adjust-position="{{false}}" 
+        hold-keyboard="{{true}}" 
+        auto-height="{{true}}" 
+        cursor-spacing="20"
+        maxlength="1000" 
+        placeholder="{{toolConfig.placeholder}}"
+        disable-default-padding="{{true}}"
+        show-confirm-bar="{{false}}"
+        fixed="{{false}}"></textarea>
+      <view class="input-actions">
+        <view class="clear-button" wx:if="{{inputValue}}" bindtap="clearInput">
+          <image class="clear-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTE5IDYuNDFMMTcuNTkgNSAxMiAxMC41OSA2LjQxIDUgNSA2LjQxIDEwLjU5IDEyIDUgMTcuNTkgNi40MSAxOSAxMiAxMy40MSAxNy41OSAxOSAxOS4wMCAxNy41OSAxMy40MSAxMiAxOSA2LjQxeiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+        </view>
+        <view class="send-button {{inputValue ? '' : 'disabled'}}" bindtap="sendMessage">
+          <image class="send-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTIuMDEgMjFMMjMgMTIgMi4wMSAzIDIgMTBsMTUgMi0xNSAyeiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+        </view>
+      </view>
+    </view>
+  </view>
+</view> 
+
+<wxs module="textFormat">
+  function formatBoldText(text) {
+    // 处理"✦"符号包围的文本，将其包装在text标签中以应用加粗样式
+    return text.split('✦').map(function(part, i) {
+      // 偶数索引(0, 2, 4...)是普通文本，奇数索引(1, 3, 5...)是应该加粗的文本
+      if (i % 2 === 1) {
+        return '<text class="bold-text">' + part + '</text>';
+      }
+      return part;
+    }).join('');
+  }
+  module.exports = {
+    formatBoldText: formatBoldText
+  };
+</wxs> 

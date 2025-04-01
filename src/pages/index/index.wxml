@@ -1,0 +1,87 @@
+<!--index.wxml-->
+<!-- <navigation-bar title="Weixin" back="{{false}}" color="black" background="#FFF"></navigation-bar> -->
+<scroll-view class="scrollarea" scroll-y enable-flex enhanced show-scrollbar="{{true}}" style="height: 100vh;">
+  <view class="container">
+    <view class="header">
+      <text class="title">招乎-AI招商工具箱</text>
+    </view>
+    
+    <view class="section">
+      <text class="section-title">智能工具</text>
+      
+      <view class="tool-item" bindtap="goToFindProject">
+        <view class="tool-icon-container blue">
+          <image class="tool-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzE5NzZEMiI+PHBhdGggZD0iTTE1LjUgMTRoLS43OWwtLjI4LS4yN0E2LjQ3MSA2LjQ3MSAwIDAgMCAxNiA5LjUgNi41IDYuNSAwIDEgMCA5LjUgMTZjMS42MSAwIDMuMDktLjU5IDQuMjMtMS41N2wuMjcuMjh2Ljc5bDUgNC45OUwyMC40OSAxOWwtNC45OS01em0tNiAwQzcuMDEgMTQgNSAxMS45OSA1IDkuNVM3LjAxIDUgOS41IDUgMTQgNy4wMSAxNCA5LjUgMTEuOTkgMTQgOS41IDE0eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+        </view>
+        <view class="tool-info">
+          <text class="tool-name">找项目</text>
+          <text class="tool-desc">基于现有区域或载体资源信息，快速匹配适合的招商项目</text>
+        </view>
+        <image class="arrow-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2JkYmRiZCI+PHBhdGggZD0iTTguNTkgMTYuNTlMMTMuMTcgMTIgOC41OSA3LjQxIDEwIDZsNiA2LTYgNi0xLjQxLTEuNDF6Ii8+PC9zdmc+" mode="aspectFit"></image>
+      </view>
+      
+      <view class="tool-item" bindtap="goToFindVenue">
+        <view class="tool-icon-container blue">
+          <image class="tool-icon" src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNOTE3LjM3NiA5MjEuNlY0NzYuNzU3MzMzbC0yOTguNDk2LTIwNC44VjBsLTUxMiAyNTYuMTI4VjkyMS42SDU1LjU1MlYxMDI0aDkxMi44OTZ2LTEwMi40SDkxNy4zMzMzMzN6IG0tNDU0LjkxMi0xMS45NDY2NjdIMjk3LjMwMTMzM3YtMTY1LjEyaDE2NS4xMnYxNjUuMTJ6IG0wLTIzNy4wNTZIMjk3LjMwMTMzM3YtMTY1LjEyaDE2NS4xMnYxNjUuMTJ6IG0yNjQuMjM0NjY3IDcxLjkzNnYxNjUuMTJoLTE2NS4xMnYtMTY1LjEyaDE2NS4xMnpNNDYyLjUwNjY2NyAyNzAuMzc4NjY3djE2NS4xMkgyOTcuMzAxMzMzdi0xNjUuMTJoMTY1LjEyeiBtMjY0LjIzNDY2NiA0MDIuMjE4NjY2aC0xNjUuMTJ2LTE2NS4xMmgxNjUuMTJ2MTY1LjEyeiIgZmlsbD0iIzE5NzZEMiIgcC1pZD0iNDk0NiI+PC9wYXRoPjwvc3ZnPg==" mode="aspectFit"></image>
+        </view>
+        <view class="tool-info">
+          <text class="tool-name">找载体</text>
+          <text class="tool-desc">基于提供的需求或项目信息，匹配合适的产业园区、厂房、办公空间等载体资源</text>
+        </view>
+        <image class="arrow-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2JkYmRiZCI+PHBhdGggZD0iTTguNTkgMTYuNTlMMTMuMTcgMTIgOC41OSA3LjQxIDEwIDZsNiA2LTYgNi0xLjQxLTEuNDF6Ii8+PC9zdmc+" mode="aspectFit"></image>
+      </view>
+      
+      <view class="tool-item" bindtap="goToIndustryAnalysis">
+        <view class="tool-icon-container blue">
+          <image class="tool-icon" src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNMCAwbTM0OS4yMDYyNjEgMGwzMjUuNTg3NDc4IDBxMzQ5LjIwNjI2MSAwIDM0OS4yMDYyNjEgMzQ5LjIwNjI2MWwwIDMyNS41ODc0NzhxMCAzNDkuMjA2MjYxLTM0OS4yMDYyNjEgMzQ5LjIwNjI2MWwtMzI1LjU4NzQ3OCAwcS0zNDkuMjA2MjYxIDAtMzQ5LjIwNjI2MS0zNDkuMjA2MjYxbDAtMzI1LjU4NzQ3OHEwLTM0OS4yMDYyNjEgMzQ5LjIwNjI2MS0zNDkuMjA2MjYxWiIgZmlsbD0iIzE5NzZEMiIgcC1pZD0iMzAzNCIgZGF0YS1zcG0tYW5jaG9yLWlkPSJhMzEzeC5zZWFyY2hfaW5kZXguMC5pMC42MDE5M2E4MVAwQ1FXdSIgY2xhc3M9InNlbGVjdGVkIj48L3BhdGg+PHBhdGggZD0iTTI4NC40NDkzOTEgMjY3LjEzMDQzNUEyOC40NDkzOTEgMjguNDQ5MzkxIDAgMCAwIDI1NiAyOTUuNTc5ODI2djQ0Mi4zMDEyMTdhMjguNDQ5MzkxIDI4LjQ0OTM5MSAwIDAgMCAyOC40NDkzOTEgMjguNDQ5MzkyaDQ1NS4xMDEyMThBMjguNDQ5MzkxIDI4LjQ0OTM5MSAwIDAgMCA3NjggNzM3Ljg4MTA0M1YzNTIuNDY3NDc4YTI4LjQ0OTM5MSAyOC40NDkzOTEgMCAwIDAtMjguNDQ5MzkxLTI4LjQ0OTM5MUg1MjMuNzc2Yy03LjU0NjQzNSAwLTE0Ljc4MTIxNy0zLjAwNTIxNy0yMC4xMTI2OTYtOC4zMzY2OTZsLTQwLjIxNDI2MS00MC4yMTQyNjFBMjguNDM4MjYxIDI4LjQzODI2MSAwIDAgMCA0NDMuMzI1MjE3IDI2Ny4xMzA0MzVIMjg0LjQ0OTM5MXogbTM2OS43NzUzMDUgMTczLjUxMjM0OGE1Ni44NzY1MjIgNTYuODc2NTIyIDAgMCAxLTk3LjY0NzMwNSAzOS42OGwtMTAzLjQ1NzM5MSA1OS4xMDI2MDhjMi4zOTMwNDMgOC43NzA3ODMgMi42Mzc5MTMgMTcuOTk3OTEzIDAuNzM0NjA5IDI2Ljg4bDcyLjEzNjM0OCAzNi4wOTZhNTYuODg3NjUyIDU2Ljg4NzY1MiAwIDEgMS0xMi43NDQzNDggMjUuNDMzMDQ0bC03Mi4xMjUyMTgtMzYuMDYyNjA5YTU2Ljg4NzY1MiA1Ni44ODc2NTIgMCAxIDEtMi4xMzcwNDMtNzcuMDIyNjA5bDEwMy40NDYyNjEtNTkuMTEzNzM5YTU2Ljk3NjY5NiA1Ni45NzY2OTYgMCAwIDEgNTQuOTA2NDM0LTcxLjg4MDM0OCA1Ni44ODc2NTIgNTYuODg3NjUyIDAgMCAxIDU2Ljg3NjUyMiA1Ni44NzY1MjJ6IiBmaWxsPSIjRkZGRkZGIiBwLWlkPSIzMDM1Ij48L3BhdGg+PC9zdmc+" mode="aspectFit"></image>
+        </view>
+        <view class="tool-info">
+          <text class="tool-name">产业链分析</text>
+          <text class="tool-desc">深入分析产业链上下游关系、供需情况及趋势</text>
+        </view>
+        <image class="arrow-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2JkYmRiZCI+PHBhdGggZD0iTTguNTkgMTYuNTlMMTMuMTcgMTIgOC41OSA3LjQxIDEwIDZsNiA2LTYgNi0xLjQxLTEuNDF6Ii8+PC9zdmc+" mode="aspectFit"></image>
+      </view>
+      
+      <view class="tool-item" bindtap="goToRelocEval">
+        <view class="tool-icon-container blue">
+          <image class="tool-icon" src="data:image/svg+xml;base64,PHN2ZyB0PSIxNzQyMzc1OTU1MjcwIiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9Ijc5NTYiIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cGF0aCBkPSJNODkuOSAzMTUuOGMyLjMgNS41IDUuNiAxMC41IDkuNyAxNC42bDg5LjUgODkuNWM4LjggOC44IDIwLjIgMTMuMSAzMS43IDEzLjFzMjIuOS00LjQgMzEuNy0xMy4xYzE3LjUtMTcuNSAxNy41LTQ1LjkgMC02My40bC0xMy4xLTEzLjFoOTMuNGMyNC44IDAgNDQuOC0yMCA0NC44LTQ0LjggMC0yNC44LTIwLTQ0LjgtNDQuOC00NC44aC05My40bDEzLjEtMTMuMWMxNy41LTE3LjUgMTcuNS00NS44IDAtNjMuM3MtNDUuOS0xNy41LTYzLjQgMEw5OS42IDI2N2MtNC4yIDQuMS03LjQgOS4xLTkuNyAxNC42LTQuNiAxMS00LjYgMjMuMyAwIDM0LjJ6TTY5MS4yIDIzMS41aC04OS42Yy0yNC44IDAtNDQuOCAyMC00NC44IDQ0LjhzMjAgNDQuOCA0NC44IDQ0LjhoODkuNmMyNC44IDAgNDQuOC0yMCA0NC44LTQ0LjhzLTIwLTQ0LjgtNDQuOC00NC44ek02OTEuMiA0MTAuN2gtODkuNmMtMjQuOCAwLTQ0LjggMjAtNDQuOCA0NC44czIwIDQ0LjggNDQuOCA0NC44aDg5LjZjMjQuOCAwIDQ0LjgtMjAgNDQuOC00NC44cy0yMC00NC44LTQ0LjgtNDQuOHpNNjkxLjIgNTg5LjloLTg5LjZjLTI0LjggMC00NC44IDIwLTQ0LjggNDQuOHMyMCA0NC44IDQ0LjggNDQuOGg4OS42YzI0LjggMCA0NC44LTIwIDQ0LjgtNDQuOHMtMjAtNDQuOC00NC44LTQ0Ljh6IiBwLWlkPSI3OTU3IiBmaWxsPSIjMTk3NkQyIj48L3BhdGg+PHBhdGggZD0iTTkxNS4yIDgxMy45aC00NC44VjE4Ni43YzAtNDkuNC00MC4yLTg5LjYtODkuNi04OS42SDUxMmMtNDkuNCAwLTg5LjYgNDAuMi04OS42IDg5LjZ2MzEzLjZIMjQzLjJjLTQ5LjQgMC04OS42IDQwLjItODkuNiA4OS42djIyNGgtNDQuOEM4NCA4MTMuOSA2NCA4MzQgNjQgODU4LjdzMjAgNDQuOCA0NC44IDQ0LjhoODA2LjRjMjQuOCAwIDQ0LjgtMjAgNDQuOC00NC44cy0yMC00NC44LTQ0LjgtNDQuOHogbS02NzIgMHYtMjI0aDE3OS4ybC0wLjEgMjI0SDI0My4yeiBtMjY4LjggMFYxODYuN2gyNjguOGwtMC4xIDYyNy4ySDUxMnoiIHAtaWQ9Ijc5NTgiIGZpbGw9IiMxOTc2RDIiPjwvcGF0aD48L3N2Zz4=" mode="aspectFit"></image>
+        </view>
+        <view class="tool-info">
+          <text class="tool-name">迁址动力评估</text>
+          <text class="tool-desc">综合区域政策、成本等因素，评估指定企业的迁址或对外投资的可能性</text>
+        </view>
+        <image class="arrow-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2JkYmRiZCI+PHBhdGggZD0iTTguNTkgMTYuNTlMMTMuMTcgMTIgOC41OSA3LjQxIDEwIDZsNiA2LTYgNi0xLjQxLTEuNDF6Ii8+PC9zdmc+" mode="aspectFit"></image>
+      </view>
+    </view>
+    
+    <view class="section">
+      <text class="section-title">最近使用</text>
+      
+      <view wx:if="{{loading}}" class="loading-container">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">加载历史记录中...</text>
+      </view>
+      
+      <view wx:elif="{{recentUse.length === 0}}" class="empty-history">
+        <text class="empty-text">暂无使用记录</text>
+      </view>
+      
+      <block wx:else>
+        <view class="history-list">
+          <view class="history-item" wx:for="{{recentUse}}" wx:key="id" bindtap="goToRecentTool" data-tool="{{item}}">
+            <view class="history-dot"></view>
+            <view class="history-content">
+              <view class="history-header">
+                <text class="history-text">{{item.name}}</text>
+                <text class="history-time">{{item.date}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 使用自定义组件 -->
+<custom-tabbar activeTab="index"></custom-tabbar>

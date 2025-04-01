@@ -1,0 +1,49 @@
+<!-- profile/index.wxml -->
+<view class="page">
+  <view class="scrollarea">
+    <view class="container">
+      <view class="header">
+        <text class="title">个人中心</text>
+      </view>
+      
+      <view class="user-info">
+        <image class="avatar" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiNlMGUwZTAiPjxwYXRoIGQ9Ik0xMiAxMmMyLjIxIDAgNC0xLjc5IDQtNHMtMS43OS00LTQtNC00IDEuNzktNCA0IDEuNzkgNCA0IDR6bTAgMmMtMi42NyAwLTggMS4zNC04IDR2MmgxNnYtMmMwLTIuNjYtNS4zMy00LTgtNHoiLz48L3N2Zz4="></image>
+        <text class="username">未登录</text>
+        <view class="login-button" bindtap="login">点击登录</view>
+      </view>
+      
+      <view class="menu-list">
+        <view class="menu-item" bindtap="navigateTo" data-url="/pages/settings/index">
+          <view class="menu-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjMTk3NkQyIj48cGF0aCBkPSJNMTkuMTQgMTIuOTRjLjA0LS4zLjA2LS42MS4wNi0uOTQgMC0uMzItLjAyLS42NC0uMDctLjk0bDIuMDMtMS41OGMuMTgtLjE0LjIzLS4zNi4xMi0uNTVsLTEuOTItMy4zM2MtLjEyLS4yMi0uMzctLjI5LS41OS0uMjJsLTIuMzkuOTZjLS41LS4zOC0xLjAzLS43LTEuNjItLjk0TDE0LjQgMi44MWMtLjA0LS4yNC0uMjQtLjQxLS40OC0uNDFoLTMuODRjLS24gMC0uNDUuMTctLjQ4LjQxbC0uMzYgMi41NGMtLjYuMjQtMS4xNi41Ny0xLjY0Ljk0bC0yLjM5LS45NmMtLjIyLS4wOC0uNDcgMC0uNTkuMjJMMi43NCA4Ljg3Yy0uMTIuMjEtLjA4LjQzLjEyLjU4bDIuMDMgMS41OGMtLjA1LjMtLjA5LjYzLS4wOS45NCAwIC4zMS4wMi42My4wNy45NGwtMi4wMyAxLjU4Yy0uMTguMTQtLjIzLjM2LS4xMi41NWwxLjkyIDMuMzNjLjEyLjIyLjM3LjI5LjU5LjIybDIuMzktLjk2Yy41LjM4IDEuMDMuNyAxLjYyLjk0bC4zNiAyLjU0Yy4wNS4yNC4yNS40MS40OS40MWgzLjg0Yy4yNCAwIC40NC0uMTcuNDctLjQxbC4zNi0yLjU0Yy41OS0uMjQgMS4xMy0uNTYgMS42Mi0uOTRsMi4zOS45NmMuMjIuMDguNDctLjAyLjU5LS4yMmwxLjkyLTMuMzNjLjEyLS4yMi4wNy0uNDUtLjEyLS41OGwtMi4wMy0xLjU4ek0xMiAxNS42Yy0xLjk4IDAtMy42LTEuNjItMy42LTMuNnMxLjYyLTMuNiAzLjYtMy42IDMuNiAxLjYyIDMuNiAzLjYtMS42MiAzLjYtMy42IDMuNnoiLz48L3N2Zz4="></image>
+          </view>
+          <text class="menu-text">设置</text>
+          <view class="arrow-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjYmRiZGJkIj48cGF0aCBkPSJNOC41OSAxNi41OUwxMCAxNWw1LTUtNS01LTEuNDEgMS40MUw4LjE3IDEwbC01LjU4IDUuNTkgNiA2IDEwLTEwLTEwLTEwLTIuNDEgMi40MUw3LjU5IDV6Ii8+PC9zdmc+"></image>
+          </view>
+        </view>
+        
+        <view class="menu-item" bindtap="navigateTo" data-url="/pages/feedback/index">
+          <view class="menu-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjMTk3NkQyIj48cGF0aCBkPSJNMjAuMDEgMTUuMzhjLTEuMjMgMC0yLjQyLS4yLTMuNTMtLjU2LS4zNS0uMTItLjc0LS4wMy0xLjAxLjI0bC0xLjU3IDEuOTdjLTIuODMtMS4zNS01LjQ4LTMuOS03LjgtNi44MWwxLjk1LTEuNjZjLjI3LS4yOC4zNS0uNjcuMjQtMS4wMi0uMzctMS4xMS0uNTYtMi4zLS41Ni0zLjUzIDAtLjU0LS40NS0uOTktLjk5LS45OUgzLjAxYy0uNTQgMC0uOTkuNDUtLjk5Ljk5IDAgOC4zNSA2Ljc0IDE1LjE0IDE1LjEzIDE1LjE0LjU0IDAgLjk5LS40NS45OS0uOTl2LTIuNzhjMC0uNTQtLjQ1LS45OS0uOTktLjk5aC0uMDZ6Ii8+PC9zdmc+"></image>
+          </view>
+          <text class="menu-text">意见反馈</text>
+          <view class="arrow-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjYmRiZGJkIj48cGF0aCBkPSJNOC41OSAxNi41OUwxMCAxNWw1LTUtNS01LTEuNDEgMS40MUw4LjE3IDEwbC01LjU4IDUuNTkgNiA2IDEwLTEwLTEwLTEwLTIuNDEgMi40MUw3LjU5IDV6Ii8+PC9zdmc+"></image>
+          </view>
+        </view>
+        
+        <view class="menu-item" bindtap="navigateTo" data-url="/pages/about/index">
+          <view class="menu-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjMTk3NkQyIj48cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptMSAxNWgtMnYtMmgydjJ6bTAtNGgtMlY3aDJ2NnoiLz48L3N2Zz4="></image>
+          </view>
+          <text class="menu-text">关于我们</text>
+          <view class="arrow-icon">
+            <image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjYmRiZGJkIj48cGF0aCBkPSJNOC41OSAxNi41OUwxMCAxNWw1LTUtNS01LTEuNDEgMS40MUw4LjE3IDEwbC01LjU4IDUuNTkgNiA2IDEwLTEwLTEwLTEwLTIuNDEgMi40MUw3LjU5IDV6Ii8+PC9zdmc+"></image>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <custom-tabbar activeTab="profile"></custom-tabbar>
+</view> 

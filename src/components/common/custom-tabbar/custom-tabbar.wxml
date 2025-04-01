@@ -1,0 +1,13 @@
+<!-- components/custom-tabbar/custom-tabbar.wxml -->
+<view class="tabbar">
+  <view 
+    wx:for="{{list}}" 
+    wx:key="tab" 
+    class="tab-item {{currentTab === item.tab ? 'active' : ''}}" 
+    bindtap="switchTab" 
+    data-tab="{{item.tab}}" 
+    data-url="{{item.pagePath}}">
+    <image class="tab-icon" src="{{currentTab === item.tab ? item.activeIcon : item.icon}}"></image>
+    <text class="tab-text">{{item.text}}</text>
+  </view>
+</view> 

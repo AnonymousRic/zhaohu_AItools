@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="100" cy="100" r="90" fill="#E74C3C"/>
+  
+  <!-- 产业链连接线 -->
+  <path d="M60 100 L100 60 L140 100 L100 140 Z" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  
+  <!-- 节点 -->
+  <circle cx="60" cy="100" r="15" fill="#FFFFFF"/>
+  <circle cx="100" cy="60" r="15" fill="#FFFFFF"/>
+  <circle cx="140" cy="100" r="15" fill="#FFFFFF"/>
+  <circle cx="100" cy="140" r="15" fill="#FFFFFF"/>
+  
+  <!-- 中心连接点 -->
+  <circle cx="100" cy="100" r="20" fill="#FFFFFF"/>
+  
+  <!-- 图表指示线 -->
+  <line x1="85" y1="100" x2="115" y2="100" stroke="#E74C3C" stroke-width="4"/>
+  <line x1="100" y1="85" x2="100" y2="115" stroke="#E74C3C" stroke-width="4"/>
+</svg> 

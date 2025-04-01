@@ -1,0 +1,87 @@
+<view class="result-container">
+  <!-- 顶部导航栏 -->
+  <view class="header">
+    <view class="back-button" bindtap="goBack">
+      <image class="back-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzMzMzMzMyI+PHBhdGggZD0iTTIwIDExSDcuODNsNS41OS01LjU5TDEyIDRsLTggOCA4IDggMS40MS0xLjQxTDcuODMgMTNIMjB2LTJ6Ii8+PC9zdmc+" mode="aspectFit"></image>
+    </view>
+    <text class="title">推荐载体</text>
+    <view class="home-button" bindtap="goHome">
+      <image class="home-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzMzMzMzMyI+PHBhdGggZD0iTTEwIDIwdjLTZoNHY2aDV2LThoM0wxMiAzIDIgMTJoM3Y4eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+    </view>
+  </view>
+
+  <!-- 加载中显示 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">正在加载推荐载体...</text>
+  </view>
+
+  <!-- 无结果显示 -->
+  <view class="no-result" wx:elif="{{!venues.length}}">
+    <image class="no-result-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NjY2NjYyI+PHBhdGggZD0iTTE1LjUgMTRoLS43OWwtLjI4LS4yN0M1LjQxIDcuNTkgMTMuNDItLjAxIDIwLjUgNi4zYzMuODggMy4xMyAzLjgzIDguNjgtLjA3IDExLjc5bC4yNy4yOHYuNzlsNSA0Ljk5TDIwLjQ5IDE5bC00Ljk5LTV6bS02IDBDNY21MIDAgMS45Ljc3MiAxNC45LjMyNCA5LjI2Ny41IDcuNTU0Ljc3MiA2IDIuNjYgNi41IDQgNy40NjMgNCA4LjUgNCA5LjQ5NSA0IDEwLjUgMy40ODYgMTAuNSAyLjVzLS45MDUtMi41LTIuNS0yLjVDNi42NzcgMCA1IDEuNTU3IDUgMy41UzYuNjc3IDcgOC41IDcgMTIgNS40NDMgMTIgMy41eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+    <text class="no-result-text">没有找到匹配的载体</text>
+    <text class="no-result-tip">请尝试调整您的搜索条件</text>
+  </view>
+
+  <!-- 载体列表 -->
+  <scroll-view class="venue-list" scroll-y enable-flex enhanced show-scrollbar="{{true}}" wx:else>
+    <view class="venue-item" wx:for="{{venues}}" wx:key="id">
+      <view class="venue-header">
+        <text class="venue-title">推荐载体 {{index + 1}}: {{item.name}}</text>
+      </view>
+      
+      <view class="venue-image-container" wx:if="{{item.images && item.images.length}}">
+        <image class="venue-image" src="{{item.images[0]}}" mode="aspectFill"></image>
+      </view>
+
+      <view class="venue-desc">
+        <text>{{item.description}}</text>
+      </view>
+      
+      <view class="venue-info">
+        <view class="info-row">
+          <text class="info-label">地址:</text>
+          <text class="info-value">{{item.address}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">类型:</text>
+          <text class="info-value">{{item.type}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">面积:</text>
+          <text class="info-value">{{item.area}} ㎡</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">价格:</text>
+          <text class="info-value">{{item.price}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">联系电话:</text>
+          <text class="info-value">{{item.contactPhone || '400-123-4567'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">可入驻行业:</text>
+          <text class="info-value">{{item.suitableIndustries}}</text>
+        </view>
+      </view>
+
+      <view class="venue-actions">
+        <view class="action-button" bindtap="favoriteVenue" data-id="{{item.id}}">
+          <image class="action-icon" src="data:image/svg+xml;base64,{{item.favorited ? 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2YxOTYyOSI+PHBhdGggZD0iTTEyIDE3LjI3TDE4LjE4IDIxbC0xLjY0LTcuMDNMMjIgOS4yNGwtNy4xOS0uNjFMMTIgMiA5LjE5IDguNjMgMiA5LjI0bDUuNDYgNC43M0w1LjgyIDIxeiIvPjwvc3ZnPg==' : 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTIyIDkuMjRsLTcuMTktLjYyTDEyIDIgOS4xOSA4LjYzIDIgOS4yNGw1LjQ2IDQuNzNMNS44MiAyMSAxMiAxNy4yNyAxOC4xOCAyMWwtMS42My03LjAzTDIyIDkuMjR6TTEyIDE1LjRsLTMuNzYgMi4yNyAxLTQuMjgtMy4zMi0yLjg4IDQuMzgtLjM4TDEyIDYuMWwxLjcxIDQuMDQgNC4zOC4zOC0zLjMyIDIuODggMSA0LjI4TDEyIDE1LjR6Ii8+PC9zdmc+'}}"/>
+          <text class="action-text">{{item.favorited ? '已收藏' : '收藏'}}</text>
+        </view>
+        <view class="action-button" bindtap="shareVenue" data-id="{{item.id}}">
+          <image class="action-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTE4IDE2LjA4Yy0uNzYgMC0xLjQ0LjMtMS45Ni43N0w4LjkxIDEyLjdjLjA1LS4yMy4wOS0uNDYuMDktLjdzLS4wNC0uNDctLjA5LS43bDcuMDUtNC4xMWMuNTQuNSAxLjI1LjgxIDIuMDQuODEgMS42NiAwIDMtMS4zNCAzLTNzLTEuMzQtMy0zLTMtMyAxLjM0LTMgM2MwIC4yNC4wNC40Ny4wOS43TDguMDQgOS44MUM3LjUgOS4zMSA2Ljc5IDkgNiA5Yy0xLjY2IDAtMyAxLjM0LTMgM3MxLjM0IDMgMyAzYy43OSAwIDEuNS0uMzEgMi4wNC0uODFsNy4xMiA0LjE2Yy0uMDUuMjEtLjA4LjQzLS4wOC42NCAwIDEuNjYgMS4zNCAzIDMgM3MzLTEuMzQgMy0zLTEuMzQtMy0zLTN6Ii8+PC9zdmc+" mode="aspectFit"></image>
+          <text class="action-text">分享</text>
+        </view>
+        <view class="action-button contact-button" bindtap="contactInquiry" data-id="{{item.id}}">
+          <image class="action-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTYuNjIgMTAuNzljLjM1LS4yLjc0LS4zOCAxLjE3LS40NWwuMjgtLjA0YzEuMTYtLjE3IDIuNTUuMTUgMy40MyAuOTNsLjItLjEzYy44MjEtLjUgMS43NzItLjgzMiAyLjc1LTEgLjk4NC0uMTY2IDEuOTk4LS4wNzUgMi45MS4zLjE4LS4wNi4zNy0uMDkuNTYtLjA5IDEuMDMgMCAxLjg3Ljg0IDEuODcgMS44NyAwIC4zLS4wOC41OS0uMjIuODUgMS4yNy43NiAyLjEgMi4xNSAyLjEgMy43NSAwIDIuMzgtMS45MiA0LjMtNC4zIDQuM0g4LjI4Yy0yLjM4IDAtNC4zLTEuOTItNC4zLTQuM2gwYzAtMi4zMyAxLjg1LTQuMjMgNC4xOS00LjNINi42MloiLz48L3N2Zz4=" mode="aspectFit"></image>
+          <text class="action-text">联系咨询</text>
+        </view>
+        <view class="action-button view-button" bindtap="viewVenueDetail" data-id="{{item.id}}">
+          <text class="action-text">查看详情</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view> 

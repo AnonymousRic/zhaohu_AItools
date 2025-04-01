@@ -1,0 +1,48 @@
+/* components/custom-tabbar/custom-tabbar.wxss */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 110rpx;
+  background-color: #ffffff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 999;
+}
+
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 140rpx;
+  height: 100%;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.tab-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-bottom: 8rpx;
+}
+
+.tab-text {
+  font-size: 24rpx;
+  color: #757575;
+  line-height: 1;
+}
+
+.tab-item.active .tab-text {
+  color: #1976D2;
+  font-weight: 500;
+}
+
+/* 添加点击效果 */
+.tab-item:active {
+  opacity: 0.8;
+} 
