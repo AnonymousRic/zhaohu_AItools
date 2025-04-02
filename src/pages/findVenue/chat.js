@@ -1,6 +1,7 @@
 // 引入工具函数
 const storage = require('../../utils/storage');
 const db = require('../../utils/database');
+const { TOOL_IDS, TOOL_NAMES } = require('../../constants/index');
 
 Page({
   data: {
@@ -10,6 +11,8 @@ Page({
       placeholder: "请输入您的载体需求...",
       welcomeMessage: "您好，我是找载体助手，可以根据您的需求推荐合适的载体。请问您有什么需要查找的载体类型或要求吗？",
       avatarPath: "/assets/icons/tools/findVenue.svg",
+      toolName: "找载体助手",
+      toolType: "findVenue",
       apiConfig: {
         url: "https://api.coze.cn/v1/workflows/chat",
         method: "POST",

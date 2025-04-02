@@ -1,6 +1,7 @@
 // 引入工具函数
 const storage = require('../../utils/storage');
 const db = require('../../utils/database');
+const { TOOL_IDS, TOOL_NAMES } = require('../../constants/index');
 
 Page({
   data: {
@@ -10,6 +11,8 @@ Page({
       placeholder: "请输入您想分析的产业链...",
       welcomeMessage: "您好，我是产业链分析助手，可以帮您分析特定产业的现状、特征和趋势。请告诉我您想了解的产业链。",
       avatarPath: "/assets/icons/tools/industryAnalysis.svg",
+      toolName: "产业链分析助手",
+      toolType: "industryAnalysis",
       apiConfig: {
         chatUrl: "https://zhaohua-api.rainbowbridge.cn/api/v1/app/tool/industryanalysis/chat",
         resultUrl: "/pages/industryAnalysis/result"

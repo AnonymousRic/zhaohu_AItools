@@ -65,6 +65,7 @@
   - 键盘行为优化
   - 工具使用记录功能
   - 适配Coze的SSE(Server-Sent Events)响应格式
+  - 消息文本格式化处理，支持Markdown风格的加粗、斜体等样式
 
 - **结果展示组件**:
   - 针对各工具定制的结果展示页面
@@ -83,6 +84,57 @@
 - **本地存储**: 使用本地存储记录工具使用历史，提供快速访问
 - **长连接支持**: 支持最长180秒的请求处理时间，适应复杂AI处理需求
 - **智能时间处理**: 根据消息发送时间智能显示不同格式的时间标记
+
+## 工具配置说明
+
+所有聊天工具需要在其配置中包含以下关键属性，以确保功能正常：
+
+```javascript
+toolConfig: {
+  // 基础属性
+  type: 'toolType',              // 工具类型标识符，如findProject
+  title: "工具名称",             // 显示在界面上的工具名称
+  placeholder: "输入提示...",    // 输入框占位文本
+  welcomeMessage: "欢迎消息",    // 初始欢迎消息
+  avatarPath: "/path/to/avatar.svg", // 工具头像路径
+  
+  // 消息历史记录所需属性
+  toolName: "工具名称",          // 用于记录工具使用和对话历史
+  toolType: "toolType",          // 用于记录工具类型和页面路径
+  
+  // API配置
+  apiConfig: {
+    // 根据工具类型不同有所差异
+    // Coze API 配置示例
+    url: "https://api.coze.cn/v1/workflows/chat",
+    method: "POST",
+    workflowId: "工作流ID",
+    authToken: "API密钥",
+    isSSE: true,
+    responseType: 'text'
+  },
+  
+  // 结果配置
+  resultConfig: {
+    dataKey: "dataKey",          // 结果数据键名
+    resultPage: "/pages/tool/result", // 结果页面路径
+    hasResult: false,            // 是否已有结果
+    needConfirm: true            // 是否需要用户确认后查看结果
+  }
+}
+```
+
+必须确保`toolName`和`toolType`属性存在，否则会导致对话历史无法正确记录。
+
+### 消息文本格式化处理
+
+聊天组件支持基础的Markdown风格文本格式化，包括：
+
+- **加粗文本**: 使用`**文本**`格式
+- **斜体文本**: 使用`*文本*`格式
+- **加粗斜体**: 使用`***文本***`格式
+
+实现方式采用特殊的分割处理技术，避免了微信小程序中正则表达式的限制。格式化逻辑位于`chat-page.wxml`文件的WXS模块中。
 
 ## 使用方法
 
@@ -298,6 +350,12 @@ const request = require('./../../../../utils/request');
 - 改进消息时间显示，今天的消息只显示时间，历史消息同时显示日期
 - 增强历史记录功能，确保历史消息加载时保留原始时间信息
 - 添加详细的Coze API集成文档
+
+### v1.3.1 (2023-04-10)
+- 修复工具配置信息不完整导致无法记录对话历史的问题
+- 为所有工具组件添加toolName和toolType必要属性
+- 优化消息内容格式化处理，支持Markdown风格文本
+- 增强文本处理的稳定性和兼容性
 
 ## 联系方式
 

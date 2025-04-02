@@ -1,6 +1,7 @@
 // 引入工具函数
 const storage = require('../../utils/storage');
 const db = require('../../utils/database');
+const { TOOL_IDS, TOOL_NAMES } = require('../../constants/index');
 
 Page({
   data: {
@@ -10,6 +11,8 @@ Page({
       placeholder: "请输入您想评估的企业名称...",
       welcomeMessage: "您好，我是企业选址动力评估助手，可以帮您评估指定企业近期迁址或对外投资的可能性。请告诉我您想要评估的企业名称。",
       avatarPath: "/assets/icons/tools/relocEval.svg",
+      toolName: "迁址动力评估助手",
+      toolType: "relocEval",
       apiConfig: {
         chatUrl: "https://zhaohua-api.rainbowbridge.cn/api/v1/app/tool/reloceval/chat",
         resultUrl: "/pages/relocEval/result"
