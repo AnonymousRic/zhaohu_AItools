@@ -5,7 +5,7 @@
 // API基础配置
 const API_CONFIG = {
   BASE_URL: 'https://api.example.com',
-  TIMEOUT: 30000,
+  TIMEOUT: 180000, // 修改为180秒（3分钟）超时
   RETRY_COUNT: 3,
   RETRY_DELAY: 1000
 };
@@ -28,7 +28,7 @@ const RESPONSE_CODE = {
   SERVER_ERROR: 500
 };
 
-// 错误码
+// 错误�?
 const ERROR_CODE = {
   NETWORK_ERROR: 1001,  // 网络请求失败
   UNAUTHORIZED: 1002,   // 用户未授权

@@ -7,7 +7,7 @@
 const BASE_URL = 'https://api.example.com';
 
 // 请求超时时间（毫秒）
-const TIMEOUT = 30000;
+const TIMEOUT = 180000; // 改为180秒（3分钟），以便有足够时间处理Coze API响应
 
 /**
  * 发送GET请求

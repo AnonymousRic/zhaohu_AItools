@@ -33,5 +33,16 @@
     "miniprogramRoot": "src/",
     "cloudbaseRoot": "",
     "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
-    "srcMiniprogramRoot": "src/"
+    "srcMiniprogramRoot": "src/",
+    "networkTimeout": {
+        "request": 180000,
+        "connectSocket": 60000,
+        "uploadFile": 60000,
+        "downloadFile": 60000
+    },
+    "permission": {
+        "webview": {
+            "desc": "用于展示外部内容"
+        }
+    }
 }

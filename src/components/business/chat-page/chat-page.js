@@ -163,7 +163,7 @@ Component({
       // 添加调试消息
       console.log("准备调用API，输入:", userInput);
       
-      // 构建请求数据
+      // 构建请求数据 - 更新以匹配Coze API格式
       let requestData = {
         workflow_id: apiConfig.workflowId,
         additional_messages: [
@@ -204,6 +204,7 @@ Component({
         },
         data: requestData,
         timeout: 180000, // 180秒超时（3分钟）
+        responseType: 'text', // 确保返回文本而不是JSON，因为SSE是文本格式
         success: (res) => {
           console.log("API响应完整数据:", JSON.stringify(res));
           
@@ -372,7 +373,7 @@ Component({
       let responseContent = '抱歉，无法处理您的请求，请稍后再试。';
       let resultData = null;
       let hasFoundData = false;
-      let completedChatId = null;
+      let hasCompletedMessage = false;
       
       if (res.data && typeof res.data === 'string') {
         // 尝试解析SSE格式的响应
@@ -386,6 +387,7 @@ Component({
             // 处理错误事件
             if (line.startsWith('event: conversation.chat.failed')) {
               foundError = true;
+              console.log('发现错误事件');
               continue;
             }
             
@@ -395,6 +397,7 @@ Component({
                 const errorData = JSON.parse(line.substring(6));
                 if (errorData.code && errorData.msg) {
                   responseContent = `API错误: ${errorData.msg} (${errorData.code})`;
+                  console.error('API错误:', errorData);
                 }
               } catch (e) {
                 console.error('解析错误信息失败:', e);
@@ -402,9 +405,22 @@ Component({
               break;
             }
             
+            // 处理消息增量事件
+            if (line.startsWith('event: conversation.message.delta')) {
+              console.log('收到消息增量');
+              continue;
+            }
+            
             // 处理消息完成事件
             if (line.startsWith('event: conversation.message.completed')) {
-              completedChatId = true;
+              hasCompletedMessage = true;
+              console.log('消息完成事件');
+              continue;
+            }
+            
+            // 处理需要操作事件
+            if (line.startsWith('event: conversation.chat.requires_action')) {
+              console.log('需要操作事件');
               continue;
             }
             
@@ -419,6 +435,7 @@ Component({
                     jsonData.type === 'answer' && 
                     jsonData.content) {
                   fullContent = jsonData.content;
+                  console.log('收到assistant回复:', fullContent.substring(0, 30));
                 }
                 
                 // 处理verbose类型消息，可能包含结构化数据
@@ -427,21 +444,24 @@ Component({
                     jsonData.content) {
                   try {
                     const verboseData = JSON.parse(jsonData.content);
-                    console.log('verbose数据:', verboseData);
+                    console.log('verbose数据类型:', verboseData.msg_type);
                     
                     // 检查是否包含推荐结果数据
-                    if (verboseData.data && typeof verboseData.data === 'string' && 
-                        (verboseData.data.includes('projects') || verboseData.data.includes('venues'))) {
+                    if (verboseData.data && typeof verboseData.data === 'string') {
                       try {
-                        const parsedResultData = JSON.parse(verboseData.data);
-                        
-                        // 检查数据结构中是否包含实际数据
-                        if (parsedResultData.projects && Array.isArray(parsedResultData.projects) && parsedResultData.projects.length > 0) {
-                          resultData = parsedResultData.projects;
-                          hasFoundData = true;
-                        } else if (parsedResultData.venues && Array.isArray(parsedResultData.venues) && parsedResultData.venues.length > 0) {
-                          resultData = parsedResultData.venues;
-                          hasFoundData = true;
+                        if (verboseData.data.includes('projects') || verboseData.data.includes('venues')) {
+                          const parsedResultData = JSON.parse(verboseData.data);
+                          
+                          // 检查数据结构中是否包含实际数据
+                          if (parsedResultData.projects && Array.isArray(parsedResultData.projects) && parsedResultData.projects.length > 0) {
+                            resultData = parsedResultData.projects;
+                            hasFoundData = true;
+                            console.log('找到项目数据:', resultData.length);
+                          } else if (parsedResultData.venues && Array.isArray(parsedResultData.venues) && parsedResultData.venues.length > 0) {
+                            resultData = parsedResultData.venues;
+                            hasFoundData = true;
+                            console.log('找到载体数据:', resultData.length);
+                          }
                         }
                       } catch (e) {
                         console.error('解析结果数据失败:', e);
@@ -452,9 +472,9 @@ Component({
                   }
                 }
                 
-                // 检查需要操作的事件 (requires_action)
-                if (completedChatId && jsonData.required_action) {
-                  console.log('需要操作:', jsonData.required_action);
+                // 处理需要操作的事件数据
+                if (jsonData.status === 'requires_action' && jsonData.required_action) {
+                  console.log('需要执行操作:', jsonData.required_action);
                 }
               } catch (e) {
                 console.error('解析JSON数据失败:', e);
@@ -611,6 +631,28 @@ Component({
         content: formattedContent, // 使用处理后的内容
         recommendations: recommendations,
         time: this.formatTime(new Date())
+      };
+      
+      this.setData({
+        messages: [...this.data.messages, message],
+        scrollToView: 'msg_' + message.id
+      });
+    },
+    
+    // 添加系统消息（支持指定时间）
+    addSystemMessageWithTime: function(content, timestamp) {
+      // 处理消息格式化
+      const { formattedContent, recommendations } = this.formatMessageContent(
+        content,
+        this.properties.toolConfig.type
+      );
+      
+      const message = {
+        id: Date.now().toString(),
+        type: 'system',
+        content: formattedContent, // 使用处理后的内容
+        recommendations: recommendations,
+        time: this.formatTime(timestamp || new Date())
       };
       
       this.setData({

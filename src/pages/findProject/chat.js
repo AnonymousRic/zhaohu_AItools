@@ -15,7 +15,8 @@ Page({
         method: "POST",
         workflowId: "7486096531545276452",
         authToken: "pat_qDM3tPe7y6slRlIOnrUOhh22uiSZ4tUuAa3sM3oXyf8fbb0jleIvgjywhCHouXWG",
-        isSSE: true
+        isSSE: true,
+        responseType: 'text'
       },
       resultConfig: {
         dataKey: "projects",
@@ -54,7 +55,7 @@ Page({
               id: Date.now() - 1000, // 确保ID比系统消息小
               type: 'user',
               content: historyItem.userMessage,
-              time: this.chatPage.formatTime(new Date())
+              time: historyItem.timestamp ? this.chatPage.formatTime(new Date(historyItem.timestamp)) : this.chatPage.formatTime(new Date())
             };
             
             this.chatPage.setData({
@@ -63,8 +64,9 @@ Page({
           }
           
           if (historyItem.aiResponse) {
-            // 添加AI回复
-            this.chatPage.addSystemMessage(historyItem.aiResponse);
+            // 添加AI回复（使用历史时间戳+1秒，确保显示在用户消息之后）
+            const timestamp = historyItem.timestamp ? (historyItem.timestamp + 1000) : Date.now();
+            this.chatPage.addSystemMessageWithTime(historyItem.aiResponse, new Date(timestamp));
           }
         } else {
           console.error('未找到聊天页面组件');
