@@ -65,7 +65,7 @@
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents",
   "networkTimeout": {
-    "request": 180000,
+    "request": 300000,
     "connectSocket": 60000,
     "uploadFile": 60000,
     "downloadFile": 60000
@@ -73,6 +73,9 @@
   "permission": {
     "scope.userLocation": {
       "desc": "您的位置信息将用于为您推荐附近的项目和载体"
+    },
+    "scope.subscribeMessage": {
+      "desc": "订阅消息用于接收任务处理完成通知"
     }
   },
   "requiredPrivateInfos": [

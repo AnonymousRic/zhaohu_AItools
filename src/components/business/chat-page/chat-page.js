@@ -61,11 +61,34 @@ Component({
       this.requestStatusKey = `request_status_${toolId}`;
       this.backgroundJobKey = `background_job_${toolId}`;
       
+      // 检查是否是从历史记录打开的对话
+      const pages = getCurrentPages();
+      const currentPage = pages[pages.length - 1];
+      const isFromHistory = currentPage && currentPage.options && currentPage.options.historyId;
+      
+      // 如果不是从历史记录打开，则清除之前的消息
+      if (!isFromHistory) {
+        // 清除本地存储的消息
+        wx.removeStorage({
+          key: this.storageKey,
+          complete: () => {
+            console.log('首次进入工具，清除之前的消息');
+            
+            // 初始化消息数组为空
+            this.setData({
+              messages: []
+            });
+            
+            // 添加欢迎消息
+            this.addSystemMessage(this.properties.toolConfig.welcomeMessage);
+          }
+        });
+      } else {
       // 检查是否有未完成的请求
       this.checkPendingRequests();
-      
-      // 检查是否有后台任务完成但未显示的消息
-      this.checkBackgroundJobs();
+        
+        // 检查是否有后台任务完成但未显示的消息
+        this.checkBackgroundJobs();
       
       // 尝试从存储中恢复消息和结果数据
       this.loadMessagesFromStorage();
@@ -73,6 +96,7 @@ Component({
       // 如果没有恢复到任何消息，则添加欢迎消息
       if (this.data.messages.length === 0) {
         this.addSystemMessage(this.properties.toolConfig.welcomeMessage);
+      }
       }
       
       // 初始化页面可见性状态
@@ -138,15 +162,8 @@ Component({
     checkBackgroundJobs: function() {
       try {
         const backgroundJob = wx.getStorageSync(this.backgroundJobKey);
-        console.log('检查后台任务状态:', backgroundJob ? '找到任务' : '无任务');
         
         if (backgroundJob && backgroundJob.completed) {
-          console.log('发现已完成的后台任务:', backgroundJob);
-          console.log('任务响应内容类型:', typeof backgroundJob.response);
-          console.log('任务响应内容预览:', typeof backgroundJob.response === 'string' ? 
-                    backgroundJob.response.substring(0, 100) + (backgroundJob.response.length > 100 ? '...' : '') : 
-                    '非字符串内容');
-          
           // 添加AI响应消息
           if (backgroundJob.response) {
             // 确保response是字符串
@@ -154,7 +171,6 @@ Component({
             if (typeof responseContent !== 'string') {
               try {
                 responseContent = JSON.stringify(responseContent);
-                console.log('将非字符串响应转换为JSON字符串');
               } catch (e) {
                 responseContent = '收到响应，但格式无法显示';
                 console.error('响应内容无法转换为字符串:', e);
@@ -171,7 +187,6 @@ Component({
                   
                   // 尝试从原始响应中提取用户可读内容
                   if (backgroundJob.originalResponse) {
-                    console.log('检测到原始SSE响应数据，提取用户内容');
                     const events = backgroundJob.originalResponse.split('\n\n').filter(event => event.trim());
                     let extractedContent = '';
                     
@@ -191,7 +206,6 @@ Component({
                     }
                     
                     if (extractedContent && extractedContent.length > 0) {
-                      console.log(`从原始响应中提取出${extractedContent.length}字符的用户内容`);
                       // 使用提取的内容替代系统消息
                       responseContent = extractedContent;
                       this.addSystemMessage(extractedContent);
@@ -200,7 +214,6 @@ Component({
                       const lastUserMessage = this.findLastUserMessage();
                       if (lastUserMessage) {
                         this.recordChatConversation(lastUserMessage.content, extractedContent);
-                        console.log('已记录对话历史');
                       }
                       
                       // 继续处理结果数据部分
@@ -208,9 +221,10 @@ Component({
                         this.setData({
                           resultData: backgroundJob.resultData
                         });
-                        
-                        // 其余逻辑不变...
                       }
+                      
+                      // 发送完成通知
+                      this.sendNotification(backgroundJob.toolName || '您的请求', false);
                       
                       // 重置状态并清除任务
                       this.setData({
@@ -229,6 +243,10 @@ Component({
                   
                   console.warn('忽略系统格式消息');
                   this.addSystemMessage('处理已完成，但未返回内容');
+                  
+                  // 发送完成通知
+                  this.sendNotification(backgroundJob.toolName || '您的请求', false);
+                  
                   // 重置状态
                   this.setData({
                     loading: false,
@@ -241,7 +259,6 @@ Component({
                   return;
                 }
               } catch (e) {
-                console.log('响应不是有效的JSON格式，保留原始内容');
               }
             }
             
@@ -253,7 +270,6 @@ Component({
             if (lastUserMessage) {
               // 记录对话到聊天历史
               this.recordChatConversation(lastUserMessage.content, responseContent);
-              console.log('已记录对话历史');
             }
             
             // 重置加载和处理状态
@@ -307,34 +323,96 @@ Component({
               }
             }
             
+            // 发送通知
+            this.sendNotification(backgroundJob.toolName || '您的请求', false);
+            
             // 清除后台任务状态
             wx.removeStorage({
               key: this.backgroundJobKey
             });
+          } else if (backgroundJob.error) {
+            // 如果有错误消息
+            this.addSystemMessage(`处理失败: ${backgroundJob.error}`);
             
-            // 保存更新后的消息
-            this.saveMessagesToStorage();
+            // 重置状态
+            this.setData({
+              loading: false,
+              isBackgroundProcessing: false
+            });
             
-            // 显示处理完成的提示
-            wx.showToast({
-              title: '处理已完成',
-              icon: 'success',
-              duration: 2000
+            // 发送错误通知
+            this.sendNotification(backgroundJob.toolName || '您的请求', true);
+            
+            // 清除后台任务状态
+            wx.removeStorage({
+              key: this.backgroundJobKey
+            });
+          } else if (backgroundJob.isCancelled) {
+            // 处理用户主动取消的情况
+            // 重置状态 - 大部分情况下已经在stopRequest中处理，这里是为了防止页面重新打开时的处理
+            this.setData({
+              loading: false,
+              isBackgroundProcessing: false
+            });
+            
+            // 清除后台任务状态
+            wx.removeStorage({
+              key: this.backgroundJobKey
+            });
+          } else {
+            // 没有响应也没有错误，回显通用消息
+            this.addSystemMessage('任务已完成，但未返回结果');
+            
+            // 重置状态
+            this.setData({
+              loading: false,
+              isBackgroundProcessing: false
+            });
+            
+            // 发送通知
+            this.sendNotification(backgroundJob.toolName || '您的请求', false);
+            
+            // 清除后台任务状态
+            wx.removeStorage({
+              key: this.backgroundJobKey
             });
           }
-        } else if (backgroundJob && !backgroundJob.completed) {
-          // 标记正在后台处理
-          console.log('发现未完成的后台任务，设置处理中状态');
+        } else if (backgroundJob && backgroundJob.processing) {
+          // 如果任务仍在处理中，更新状态
+          console.log('后台任务正在处理中');
           this.setData({
             isBackgroundProcessing: true
           });
+          
+          // 检查任务是否超时
+          const now = Date.now();
+          const taskStartTime = backgroundJob.timestamp || 0;
+          const elapsedTime = now - taskStartTime;
+          
+          // 如果任务处理时间超过5分钟(300000毫秒)，认为超时
+          if (elapsedTime > 300000) {
+            console.log('后台任务处理超时');
+            
+            // 添加超时消息
+            this.addSystemMessage('处理超时，请重试');
+            
+            // 重置状态
+            this.setData({
+              loading: false,
+              isBackgroundProcessing: false
+            });
+            
+            // 发送错误通知
+            this.sendNotification(backgroundJob.toolName || '您的请求', true);
+            
+            // 清除后台任务状态
+            wx.removeStorage({
+              key: this.backgroundJobKey
+            });
+          }
         }
       } catch (error) {
-        console.error('检查后台任务状态失败:', error);
-        // 如果出现错误，重置后台处理状态
-        this.setData({
-          isBackgroundProcessing: false
-        });
+        console.error('检查后台任务失败:', error);
       }
     },
     
@@ -347,6 +425,9 @@ Component({
       }
       
       if (!this.data.inputValue.trim()) return;
+      
+      // 在用户点击发送时，请求订阅消息权限（利用用户点击行为）
+      this.requestSubscribePermission();
       
       const userMessage = {
         id: Date.now().toString(),
@@ -416,8 +497,8 @@ Component({
         return;
       }
       
-      // 添加调试消息
-      console.log("准备调用API，输入:", userInput);
+      // 删除调试消息
+      // console.log("准备调用API，输入:", userInput);
       
       // 构建请求数据 - 更新以匹配Coze API格式
       let requestData = {
@@ -438,14 +519,14 @@ Component({
       
       // 设置后台任务状态
       const backgroundJob = {
-        requestId: requestId,
-        timestamp: Date.now(),
-        userInput: userInput,
+          requestId: requestId,
+          timestamp: Date.now(),
+          userInput: userInput,
         toolType: this.properties.toolConfig.type,
         toolName: this.properties.toolConfig.title,
         completed: false,
         processing: true,
-        lastMessage: this.data.messages.length > 0 ? this.data.messages[this.data.messages.length - 1] : null
+          lastMessage: this.data.messages.length > 0 ? this.data.messages[this.data.messages.length - 1] : null
       };
       
       wx.setStorage({
@@ -475,15 +556,18 @@ Component({
         success: (res) => {
           // 如果已被停止，则不处理响应
           if (this.data.isStopping) {
-            console.log('请求已手动停止，忽略响应');
+            // 删除调试日志
+            // console.log('请求已手动停止，忽略响应');
             return;
           }
           
-          console.log("API响应完整数据:", JSON.stringify(res));
+          // 删除调试日志
+          // console.log("API响应完整数据:", JSON.stringify(res));
           
           // 检查这个响应是否是最新的请求
           if (this.currentRequestId !== requestId) {
-            console.log('收到旧请求的响应，忽略');
+            // 删除调试日志
+            // console.log('收到旧请求的响应，忽略');
             return;
           }
           
@@ -508,14 +592,16 @@ Component({
                     
                     // 使用handleSSEResponse提取的用户可读内容
                     if (sseResult.userDeltaContent && sseResult.userDeltaContent.length > 0) {
-                      console.log(`使用提取的用户内容 (${sseResult.userDeltaContent.length}字符)`);
+                      // 删除调试日志
+                      // console.log(`使用提取的用户内容 (${sseResult.userDeltaContent.length}字符)`);
                       responseContent = sseResult.userDeltaContent;
                     } else {
                       responseContent = null;
                     }
                   }
                 } catch (e) {
-                  console.log('响应不是有效的JSON格式，保留原始内容');
+                  // 删除调试日志
+                  // console.log('响应不是有效的JSON格式，保留原始内容');
                 }
               }
               
@@ -561,13 +647,54 @@ Component({
           // 清除请求状态
           wx.removeStorage({ 
             key: this.requestStatusKey,
-            success: () => console.log('请求已完成，状态已清除')
+            success: () => {
+              // 删除调试日志
+              // console.log('请求已完成，状态已清除')
+            }
           });
         },
         fail: (error) => {
           // 如果是主动取消，不显示错误消息
           if (this.data.isStopping) {
-            console.log('请求已手动停止，不显示错误');
+            // 删除调试日志
+            // console.log('请求已手动停止，不显示错误');
+            return;
+          }
+          
+          // 检查是否为abort操作（用户主动中止）
+          if (error.errMsg && error.errMsg.indexOf('abort') !== -1) {
+            console.log('用户主动中止请求');
+            
+            // 更新后台任务状态为已完成但不是错误
+            const updatedJob = {
+              ...backgroundJob,
+              completed: true,
+              processing: false,
+              timestamp: Date.now(),
+              response: '请求已停止',
+              isCancelled: true // 标记为用户主动取消
+            };
+            
+            wx.setStorage({
+              key: this.backgroundJobKey,
+              data: updatedJob
+            });
+            
+            // 移除添加消息的代码，因为stopRequest函数已经添加了相同的消息
+            // 只需重置状态即可
+            if (this.pageVisible) {
+              this.setData({ loading: false, isBackgroundProcessing: false });
+            }
+            
+            // 清除请求状态
+            wx.removeStorage({ 
+              key: this.requestStatusKey,
+              success: () => {
+                // 删除调试日志
+                // console.log('请求已完成，状态已清除')
+              }
+            });
+            
             return;
           }
           
@@ -600,13 +727,16 @@ Component({
           // 清除请求状态
           wx.removeStorage({ 
             key: this.requestStatusKey,
-            success: () => console.log('请求已完成，状态已清除')
+            success: () => {
+              // 删除调试日志
+              // console.log('请求已完成，状态已清除')
+            }
           });
         }
       });
       
       // 保存请求任务引用，用于取消
-      this.setData({ 
+      this.setData({
         requestTask 
       });
     },
@@ -614,31 +744,88 @@ Component({
     // 发送通知
     sendNotification: function(toolName, isError = false) {
       // 使用微信通知 API 发送通知
-      console.log(`准备发送${isError ? '错误' : '完成'}通知: ${toolName}`);
+      // 删除调试日志
+      // console.log(`准备发送${isError ? '错误' : '完成'}通知: ${toolName}`);
       
       // 消息内容
       const title = isError ? '处理遇到问题' : '处理已完成';
       const message = isError ? 
         `很抱歉，${toolName}处理过程中遇到了问题，请点击查看详情。` : 
         `${toolName}已处理完成，请点击查看结果。`;
-        
-      // 尝试使用订阅消息发送通知
-      if (wx.requestSubscribeMessage) {
-        wx.requestSubscribeMessage({
-          tmplIds: [''],  // 需要替换为有效的模板ID
-          success: (res) => {
-            console.log('订阅消息请求成功:', res);
+      
+      // 首先检查是否已经获取了发送订阅消息的权限
+      this.checkAndSendSubscribeMessage(toolName, isError);
+    },
+    
+    // 检查是否有权限并发送订阅消息
+    checkAndSendSubscribeMessage: function(toolName, isError = false) {
+      // 检查用户是否已授权订阅消息
+      const hasPermission = wx.getStorageSync('hasSubscribeMessagePermission');
+      // 删除调试日志
+      // console.log('用户订阅消息权限状态:', hasPermission);
+      
+      // 如果用户已授权，直接发送订阅消息
+      if (hasPermission) {
+        this.sendSubscribeMessage(toolName, isError);
+        return;
+      }
+      
+      // 如果用户未授权或授权状态未知，我们无法在后台任务完成时请求权限
+      // 因为requestSubscribeMessage必须由用户点击触发
+      // 删除调试日志
+      // console.log('用户尚未授权订阅消息或授权状态未知，无法发送通知');
+      
+      // 记录此次尝试，下次用户与页面交互时可以再次请求
+      wx.setStorageSync('shouldRequestPermissionNextTime', true);
+    },
+    
+    // 实际发送订阅消息
+    sendSubscribeMessage: function(toolName, isError = false) {
+      const now = new Date();
+      const formattedTime = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const status = isError ? '处理失败' : '处理完成';
+      
+      // 调用云函数发送订阅消息
+      // 注意：微信小程序需要通过云函数或服务端发送订阅消息
+      // 这里我们需要添加云函数调用，或者通过自己的服务器发送
+      // 删除调试日志
+      // console.log('准备发送订阅消息，数据:', {
+      //   thing7: { value: toolName },
+      //   time10: { value: formattedTime },
+      //   phrase5: { value: status }
+      // });
+      
+      // 如果有云函数
+      if (wx.cloud && wx.cloud.callFunction) {
+        wx.cloud.callFunction({
+          name: 'sendSubscribeMessage',
+          data: {
+            templateId: 'bFGSlc6zR4QOHx5QVeP5OtCiwIlTIHcY8S0qXw_o8Zw',
+            data: {
+              thing7: { value: toolName },
+              time10: { value: formattedTime },
+              phrase5: { value: status }
+            }
           },
-          fail: (err) => {
-            console.error('订阅消息请求失败:', err);
+          success: res => {
+            // 删除调试日志
+            // console.log('订阅消息发送成功:', res);
+          },
+          fail: err => {
+            console.error('订阅消息发送失败:', err);
           }
         });
+      } else {
+        // 删除调试日志
+        // console.log('云函数未初始化，无法发送订阅消息');
+        // 这里可以添加备选的消息发送方式，如调用自己的API服务器
       }
     },
 
     // 处理API响应
     handleApiResponse: function(res, isBackgroundProcessing = false) {
-      console.log("处理API响应", res);
+      // 删除调试日志
+      // console.log("处理API响应", res);
       
       // 如果响应不存在或为空，直接返回
       if (!res || !res.data) {
@@ -652,7 +839,8 @@ Component({
       // 处理SSE响应
       if ((res.header && res.header['content-type'] && res.header['content-type'].includes('text/event-stream')) 
           || (this.properties.toolConfig.apiConfig && this.properties.toolConfig.apiConfig.isSSE)) {
-        console.log("检测到SSE响应");
+        // 删除调试日志
+        // console.log("检测到SSE响应");
         return this.handleSSEResponse(res.data, isBackgroundProcessing);
       }
       
@@ -672,16 +860,16 @@ Component({
           this.addSystemMessage(messageContent);
           
           // 如果有结构化数据，保存
-          if (resultData) {
-            this.setData({
-              resultData: resultData
-            });
-            
+      if (resultData) {
+        this.setData({
+          resultData: resultData
+        });
+        
             // 保存结果数据
-            wx.setStorage({
-              key: this.resultStorageKey,
-              data: resultData
-            });
+        wx.setStorage({
+          key: this.resultStorageKey,
+          data: resultData
+        });
           }
         }
         
@@ -721,7 +909,7 @@ Component({
     
     // 处理SSE格式的响应
     handleSSEResponse: function(sseData, isBackgroundProcessing = false) {
-      console.log("处理SSE响应");
+      // 移除调试日志: console.log("处理SSE响应");
       
       if (!sseData) {
         const message = '接收到空的SSE响应';
@@ -748,7 +936,7 @@ Component({
       try {
         // 将SSE数据分割为事件
         const events = sseData.split('\n\n').filter(event => event.trim());
-        console.log(`SSE响应包含${events.length}个事件`);
+        // 移除调试日志: console.log(`SSE响应包含${events.length}个事件`);
         
         // 提前提取所有delta事件的内容作为备用
         let allDeltaContent = '';
@@ -766,8 +954,9 @@ Component({
           }
         }
         
+        // 移除调试日志
         if (allDeltaContent) {
-          console.log(`预先收集到${allDeltaContent.length}字符的增量内容`);
+          // 移除调试日志: console.log(`预先收集到${allDeltaContent.length}字符的增量内容`);
           userReadableMessage = allDeltaContent;
         }
         
@@ -785,22 +974,22 @@ Component({
             }
           }
           
-          // 记录处理的事件类型，帮助调试
-          if (eventName) {
-            console.log(`处理SSE事件: ${eventName}`);
-          }
+          // 移除调试日志
+          // if (eventName) {
+          //   console.log(`处理SSE事件: ${eventName}`);
+          // }
           
           // 处理错误事件
           if (eventName === 'conversation.chat.failed') {
             foundError = true;
-            console.log('发现错误事件');
-            continue;
-          }
-          
-          // 处理消息完成事件
-          if (eventName === 'conversation.message.completed') {
-            console.log('消息完成事件');
-          }
+            // 保留错误相关日志: console.log('发现错误事件');
+              continue;
+            }
+            
+          // 移除调试日志
+          // if (eventName === 'conversation.message.completed') {
+          //   console.log('消息完成事件');
+          // }
           
           // 只处理有效的事件数据
           if (eventData) {
@@ -809,15 +998,13 @@ Component({
               
               // 处理不同类型的事件
               if (eventName === 'conversation.message.delta' && data.content) {
-                // 记录增量内容
-                console.log(`收到增量内容: ${data.content.length}字符`);
+                // 移除调试日志: console.log(`收到增量内容: ${data.content.length}字符`);
                 completeMessage += data.content;
                 // 同时更新用户可读内容
                 userReadableMessage += data.content;
-                console.log(`累积用户可读内容: ${userReadableMessage.length}字符`);
+                // 移除调试日志: console.log(`累积用户可读内容: ${userReadableMessage.length}字符`);
               } else if (eventName === 'conversation.message.completed' && data.content) {
-                // 完整消息覆盖之前的增量内容
-                console.log(`收到完整消息: ${data.content.length}字符`);
+                // 移除调试日志: console.log(`收到完整消息: ${data.content.length}字符`);
                 
                 // 检查新接收的内容是否为系统格式消息
                 if (data.content.trim().startsWith('{') && data.content.trim().endsWith('}')) {
@@ -825,76 +1012,76 @@ Component({
                     const jsonData = JSON.parse(data.content);
                     // 如果是系统格式消息且已有累积内容，不覆盖之前累积的内容
                     if (jsonData.msg_type === 'generate_answer_finish' && userReadableMessage.length > 0) {
-                      console.log(`检测到系统格式消息，保留已累积的${userReadableMessage.length}字符用户内容`);
+                      // 移除调试日志: console.log(`检测到系统格式消息，保留已累积的${userReadableMessage.length}字符用户内容`);
                       // 不更新completeMessage和userReadableMessage，保留之前累积的内容
                     } else {
                       completeMessage = data.content;
                       userReadableMessage = data.content;
                       foundCompleteMessage = true;
-                      console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+                      // 移除调试日志: console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                     }
                   } catch (e) {
                     // 如果解析失败，则不是有效的JSON，仍然按普通内容处理
                     completeMessage = data.content;
                     userReadableMessage = data.content;
                     foundCompleteMessage = true;
-                    console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+                    // 移除调试日志: console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                   }
                 } else {
                   // 普通文本内容，直接覆盖
                   completeMessage = data.content;
                   userReadableMessage = data.content;
                   foundCompleteMessage = true;
-                  console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+                  // 移除调试日志: console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                 }
               } else if (eventName === 'conversation.data' && data.data) {
                 // 结构化数据
-                console.log('收到结构化数据');
+                // 移除调试日志: console.log('收到结构化数据');
                 resultData = data.data;
               } else if (data.role === 'assistant' && data.type === 'answer' && data.content) {
                 // 处理标准回复
-                console.log('收到assistant标准回复');
+                // 移除调试日志: console.log('收到assistant标准回复');
                 completeMessage = data.content;
                 // 同时更新用户可读内容
                 userReadableMessage = data.content;
                 foundCompleteMessage = true;
-                console.log(`设置answer消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+                // 移除调试日志: console.log(`设置answer消息，用户可读内容长度: ${userReadableMessage.length}字符`);
               } else if (data.role === 'assistant' && data.type === 'verbose' && data.content) {
                 // 处理verbose类型消息，可能包含JSON格式数据
-                console.log('收到verbose消息');
+                // 移除调试日志: console.log('收到verbose消息');
                 try {
                   const verboseData = JSON.parse(data.content);
-                  console.log('解析verbose数据类型:', verboseData.msg_type || 'unknown');
+                  // 移除调试日志: console.log('解析verbose数据类型:', verboseData.msg_type || 'unknown');
                   
                   // 忽略generate_answer_finish类型的消息，这不是真正的内容
                   if (verboseData.msg_type === 'generate_answer_finish') {
-                    console.log('跳过generate_answer_finish类型消息');
+                    // 移除调试日志: console.log('跳过generate_answer_finish类型消息');
                     continue;
                   }
-                  
-                  // 检查是否包含推荐结果数据
-                  if (verboseData.data && typeof verboseData.data === 'string') {
-                    try {
+                    
+                    // 检查是否包含推荐结果数据
+                    if (verboseData.data && typeof verboseData.data === 'string') {
+                      try {
                       // 检查是否包含project或venue关键词
-                      if (verboseData.data.includes('projects') || verboseData.data.includes('venues')) {
-                        const parsedResultData = JSON.parse(verboseData.data);
-                        
+                        if (verboseData.data.includes('projects') || verboseData.data.includes('venues')) {
+                          const parsedResultData = JSON.parse(verboseData.data);
+                          
                         // 检查是否包含项目数据
-                        if (parsedResultData.projects && Array.isArray(parsedResultData.projects) && parsedResultData.projects.length > 0) {
-                          resultData = parsedResultData.projects;
-                          console.log('找到项目数据:', resultData.length);
+                          if (parsedResultData.projects && Array.isArray(parsedResultData.projects) && parsedResultData.projects.length > 0) {
+                            resultData = parsedResultData.projects;
+                          // 移除调试日志: console.log('找到项目数据:', resultData.length);
                         } 
                         // 检查是否包含载体数据
                         else if (parsedResultData.venues && Array.isArray(parsedResultData.venues) && parsedResultData.venues.length > 0) {
-                          resultData = parsedResultData.venues;
-                          console.log('找到载体数据:', resultData.length);
+                            resultData = parsedResultData.venues;
+                          // 移除调试日志: console.log('找到载体数据:', resultData.length);
+                          }
                         }
-                      }
-                    } catch (e) {
+                      } catch (e) {
                       console.warn('解析结果数据失败:', e.message);
+                      }
                     }
-                  }
-                } catch (e) {
+                  } catch (e) {
                   console.warn('解析verbose content失败:', e.message);
                 }
               } else if (data.error) {
@@ -909,17 +1096,18 @@ Component({
                 };
               } else if (data.role === 'assistant' && data.content) {
                 // 处理其他包含content的assistant消息
-                console.log(`处理其他assistant消息`);
+                // 移除调试日志: console.log(`处理其他assistant消息`);
                 if (typeof data.content === 'string' && data.content.trim()) {
                   completeMessage += data.content;
                   // 同时更新用户可读内容
                   userReadableMessage += data.content;
-                  console.log(`累积其他assistant消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+                  // 移除调试日志: console.log(`累积其他assistant消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                 }
               }
             } catch (parseError) {
               console.warn('解析事件数据JSON失败:', parseError.message);
-              console.warn('原始事件数据:', eventData.substring(0, 100) + (eventData.length > 100 ? '...' : ''));
+              // 移除详细输出
+              // console.warn('原始事件数据:', eventData.substring(0, 100) + (eventData.length > 100 ? '...' : ''));
               
               // 获取错误信息
               if (foundCompleteMessage && eventData.trim()) {
@@ -935,8 +1123,8 @@ Component({
                       message: errorMessage,
                       resultData: null
                     };
-                  }
-                } catch (e) {
+                }
+              } catch (e) {
                   console.error('解析错误信息失败:', e);
                 }
               }
@@ -952,9 +1140,9 @@ Component({
           try {
             const jsonData = JSON.parse(finalMessage);
             if (jsonData.msg_type === 'generate_answer_finish') {
-              console.log('最终消息是系统格式消息，使用已预先收集的增量内容');
+              // 移除调试日志: console.log('最终消息是系统格式消息，使用已预先收集的增量内容');
               if (allDeltaContent && allDeltaContent.length > 0) {
-                console.log(`使用预先收集的${allDeltaContent.length}字符内容作为最终结果`);
+                // 移除调试日志: console.log(`使用预先收集的${allDeltaContent.length}字符内容作为最终结果`);
                 finalMessage = allDeltaContent;
               } else {
                 return {
@@ -962,9 +1150,9 @@ Component({
                   resultData: resultData
                 };
               }
-            }
-          } catch (e) {
-            console.log('最终消息不是有效的JSON格式，保留原始内容');
+          }
+        } catch (e) {
+            // 移除调试日志: console.log('最终消息不是有效的JSON格式，保留原始内容');
           }
         }
         
@@ -977,7 +1165,7 @@ Component({
               
               // 如果已有预先收集的delta内容
               if (allDeltaContent && allDeltaContent.length > 0) {
-                console.log(`使用预先收集的delta内容 (${allDeltaContent.length}字符)`);
+                // 移除调试日志: console.log(`使用预先收集的delta内容 (${allDeltaContent.length}字符)`);
                 return {
                   message: allDeltaContent,
                   resultData: resultData,
@@ -996,66 +1184,66 @@ Component({
           }
         }
         
-        // 记录最终处理结果
-        console.log(`最终消息内容(${finalMessage.length}字符):`, 
-                   finalMessage.substring(0, 100) + (finalMessage.length > 100 ? '...' : ''));
+        // 移除调试日志
+        // console.log(`最终消息内容(${finalMessage.length}字符):`, 
+        //            finalMessage.substring(0, 100) + (finalMessage.length > 100 ? '...' : ''));
         
         // 如果有解析到消息
         if (finalMessage) {
-          // 找到最后一条用户消息
-          const lastUserMessage = this.findLastUserMessage();
+      // 找到最后一条用户消息
+      const lastUserMessage = this.findLastUserMessage();
           if (lastUserMessage && !isBackgroundProcessing) {
-            // 记录对话到聊天历史
+        // 记录对话到聊天历史
             this.recordChatConversation(lastUserMessage.content, finalMessage);
-          }
-          
+      }
+      
           if (!isBackgroundProcessing) {
             // 添加系统消息
             this.addSystemMessage(finalMessage);
-            
+      
             // 如果有结构化数据，保存
             if (resultData) {
-              this.setData({
-                resultData: resultData
-              });
-              
+        this.setData({
+          resultData: resultData
+        });
+        
               // 保存结果数据
-              wx.setStorage({
-                key: this.resultStorageKey,
+        wx.setStorage({
+          key: this.resultStorageKey,
                 data: resultData
-              });
+        });
               
               // 处理结果展示逻辑
               const { resultConfig } = this.properties.toolConfig;
-              
-              // 如果需要确认跳转到结果页
+        
+        // 如果需要确认跳转到结果页
               if (resultConfig && resultConfig.needConfirm) {
-                setTimeout(() => {
-                  this.addSystemMessage('是否查看详细的结果报告？');
-                  
-                  // 添加"查看报告"按钮
-                  const viewReportMsg = {
-                    id: Date.now().toString(),
-                    type: 'system',
-                    content: '查看详细报告',
-                    time: this.formatTime(new Date()),
-                    isAction: true
-                  };
-                  
-                  this.setData({
-                    messages: [...this.data.messages, viewReportMsg],
-                    scrollToView: 'msg_' + viewReportMsg.id
-                  });
-                  
-                  // 保存更新后的消息到本地存储
-                  this.saveMessagesToStorage();
-                }, 1000);
+          setTimeout(() => {
+            this.addSystemMessage('是否查看详细的结果报告？');
+            
+            // 添加"查看报告"按钮
+            const viewReportMsg = {
+              id: Date.now().toString(),
+              type: 'system',
+              content: '查看详细报告',
+              time: this.formatTime(new Date()),
+              isAction: true
+            };
+            
+            this.setData({
+              messages: [...this.data.messages, viewReportMsg],
+              scrollToView: 'msg_' + viewReportMsg.id
+            });
+            
+            // 保存更新后的消息到本地存储
+            this.saveMessagesToStorage();
+          }, 1000);
               } else if (resultConfig && resultConfig.resultPage) {
-                // 直接跳转到结果页面
-                setTimeout(() => {
-                  this.navigateToResult();
-                }, 1000);
-              }
+          // 直接跳转到结果页面
+          setTimeout(() => {
+            this.navigateToResult();
+          }, 1000);
+        }
             }
           }
           
@@ -1139,10 +1327,17 @@ Component({
     
     // 记录对话到聊天历史
     recordChatConversation: function(userMessage, aiResponse) {
-      const { toolName, toolType } = this.properties.toolConfig;
+      // 从配置中获取工具名称和类型
+      // 如果toolName或toolType不存在，使用title和type作为替代
+      let { toolName, toolType, title, type } = this.properties.toolConfig;
+      
+      // 确保有正确的值：优先使用toolName/toolType，否则使用title/type
+      const chatToolName = toolName || title || '聊天工具';
+      const chatToolType = toolType || type || 'chat';
+      
+      // 移除错误提示，改为使用默认值
       if (!toolName || !toolType) {
-        console.error('工具配置信息不完整，无法记录对话历史');
-        return;
+        console.log('工具配置不完整，使用替代参数记录对话历史: ', chatToolName, chatToolType);
       }
       
       // 获取当前日期和时间，精确到分钟
@@ -1531,7 +1726,7 @@ Component({
           if (elapsedSecs > 180) {
             console.log('未完成的请求已超时，清除状态');
             
-            // 清除请求状态
+              // 清除请求状态
             wx.removeStorage({
               key: this.requestStatusKey
             });
@@ -1984,7 +2179,12 @@ Component({
     // 记录工具使用
     recordToolUsage() {
       // 获取当前工具信息
-      const { toolName, toolType } = this.properties.toolConfig;
+      // 如果toolName或toolType不存在，使用title和type作为替代
+      let { toolName, toolType, title, type } = this.properties.toolConfig;
+      
+      // 确保有正确的值：优先使用toolName/toolType，否则使用title/type
+      const chatToolName = toolName || title || '聊天工具';
+      const chatToolType = toolType || type || 'chat';
       
       // 检查wx对象和getCurrentInstance是否可用
       const page = getCurrentPages()[getCurrentPages().length - 1];
@@ -1992,14 +2192,14 @@ Component({
       // 如果在index页或有navigateBack，记录工具使用
       if (page && page.route && page.route.includes('index')) {
         if (page.recordToolUse && typeof page.recordToolUse === 'function') {
-          page.recordToolUse(toolName, `/pages/${toolType}/chat`);
+          page.recordToolUse(chatToolName, `/pages/${chatToolType}/chat`);
         }
       } else {
         // 如果不在index页，尝试调用全局方法或存储到本地
         try {
           const indexPage = getCurrentPages().find(p => p.route && p.route.includes('index/index'));
           if (indexPage && indexPage.recordToolUse) {
-            indexPage.recordToolUse(toolName, `/pages/${toolType}/chat`);
+            indexPage.recordToolUse(chatToolName, `/pages/${chatToolType}/chat`);
           } else {
             // 本地存储记录，下次进入首页时可以读取
             const now = new Date();
@@ -2011,9 +2211,9 @@ Component({
             
             const newTool = {
               id: Date.now(),
-              name: toolName,
+              name: chatToolName,
               date: dateStr,
-              path: `/pages/${toolType}/chat`,
+              path: `/pages/${chatToolType}/chat`,
               timestamp: now.getTime() // 添加时间戳
             };
             
@@ -2028,7 +2228,7 @@ Component({
             // 保存到本地存储
             wx.setStorageSync('recentToolsUsage', recentTools);
             
-            console.log(`使用工具: ${toolName}, 路径: /pages/${toolType}/chat, 时间: ${dateStr}, 时间戳: ${now.getTime()}`);
+            console.log(`使用工具: ${chatToolName}, 路径: /pages/${chatToolType}/chat, 时间: ${dateStr}, 时间戳: ${now.getTime()}`);
           }
         } catch (err) {
           console.error('记录工具使用失败:', err);
@@ -2046,36 +2246,90 @@ Component({
       console.log('尝试停止请求');
       
       // 设置停止标志
-      this.setData({
-        isStopping: true
-      });
-      
+        this.setData({
+          isStopping: true
+        });
+        
       // 尝试中断请求
-      this.data.requestTask.abort();
-      
-      // 重置状态
-      this.setData({
-        loading: false,
+        this.data.requestTask.abort();
+        
+      // 设置后台任务状态为已完成但标记为取消
+      const backgroundJob = wx.getStorageSync(this.backgroundJobKey);
+      if (backgroundJob) {
+        const updatedJob = {
+          ...backgroundJob,
+          completed: true,
+          processing: false,
+          timestamp: Date.now(),
+          response: '请求已停止',
+          isCancelled: true // 标记为用户主动取消
+        };
+        
+        wx.setStorage({
+          key: this.backgroundJobKey,
+          data: updatedJob
+        });
+      }
+        
+        // 重置状态
+        this.setData({
+          loading: false,
         isStopping: false,
         requestTask: null,
         isBackgroundProcessing: false
-      });
+        });
       
       // 添加系统消息
       this.addSystemMessage('请求已停止');
-      
-      // 清除请求状态
-      wx.removeStorage({
+        
+        // 清除请求状态
+        wx.removeStorage({ 
         key: this.requestStatusKey
-      });
-      
-      // 清除后台任务状态
-      wx.removeStorage({
-        key: this.backgroundJobKey
       });
       
       // 保存更新后的消息
       this.saveMessagesToStorage();
+    },
+
+    // 请求订阅消息权限 - 需要在用户点击操作中调用
+    requestSubscribePermission: function() {
+      const templateId = 'bFGSlc6zR4QOHx5QVeP5OtCiwIlTIHcY8S0qXw_o8Zw';
+      
+      // 检查是否已经请求过权限，避免频繁打扰用户
+      const lastRequestTime = wx.getStorageSync('subscribePermissionRequestTime') || 0;
+      const now = Date.now();
+      
+      // 如果距离上次请求时间小于7天，则不再请求
+      if (now - lastRequestTime < 7 * 24 * 60 * 60 * 1000) {
+        console.log('7天内已经请求过订阅权限，跳过请求');
+        return;
+      }
+      
+      console.log('请求订阅消息权限...');
+      
+      // 记录本次请求时间
+      wx.setStorageSync('subscribePermissionRequestTime', now);
+      
+      wx.requestSubscribeMessage({
+        tmplIds: [templateId],
+        success: (res) => {
+          console.log('订阅消息权限请求结果:', res);
+          
+          // 检查授权结果
+          if (res[templateId] === 'accept') {
+            console.log('用户同意订阅消息');
+            wx.setStorageSync('hasSubscribeMessagePermission', true);
+          } else {
+            console.log('用户拒绝订阅消息或请求过于频繁');
+            wx.setStorageSync('hasSubscribeMessagePermission', false);
+          }
+        },
+        fail: (err) => {
+          console.error('订阅消息权限请求失败:', err);
+          console.log('错误信息详情:', JSON.stringify(err));
+          wx.setStorageSync('hasSubscribeMessagePermission', false);
+        }
+      });
     }
   }
 }) 
