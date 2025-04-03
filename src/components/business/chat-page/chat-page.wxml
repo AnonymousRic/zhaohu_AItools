@@ -101,13 +101,19 @@
         placeholder="{{toolConfig.placeholder}}"
         disable-default-padding="{{true}}"
         show-confirm-bar="{{false}}"
-        fixed="{{false}}"></textarea>
+        fixed="{{false}}"
+        disabled="{{loading}}"></textarea>
       <view class="input-actions">
-        <view class="clear-button" wx:if="{{inputValue}}" bindtap="clearInput">
+        <view class="clear-button" wx:if="{{inputValue && !loading}}" bindtap="clearInput">
           <image class="clear-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzY2NjY2NiI+PHBhdGggZD0iTTE5IDYuNDFMMTcuNTkgNSAxMiAxMC41OSA2LjQxIDUgNSA2LjQxIDEwLjU5IDEyIDUgMTcuNTkgNi40MSAxOSAxMiAxMy40MSAxNy41OSAxOSAxOS4wMCAxNy41OSAxMy40MSAxMiAxOSA2LjQxeiIvPjwvc3ZnPg==" mode="aspectFit"></image>
         </view>
-        <view class="send-button {{inputValue ? '' : 'disabled'}}" bindtap="sendMessage">
+        <!-- 发送按钮 (非加载状态) -->
+        <view class="send-button {{!loading && inputValue ? '' : 'disabled'}}" bindtap="sendMessage" wx:if="{{!loading}}">
           <image class="send-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTIuMDEgMjFMMjMgMTIgMi4wMSAzIDIgMTBsMTUgMi0xNSAyeiIvPjwvc3ZnPg==" mode="aspectFit"></image>
+        </view>
+        <!-- 停止按钮 (加载状态) -->
+        <view class="send-button stop-button" bindtap="stopRequest" wx:if="{{loading}}">
+          <image class="stop-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTYgNmgxMnYxMkg2eiIvPjwvc3ZnPg==" mode="aspectFit"></image>
         </view>
       </view>
     </view>

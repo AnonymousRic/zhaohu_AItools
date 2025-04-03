@@ -368,6 +368,22 @@
   height: 32rpx;
 }
 
+/* 停止按钮样式 */
+.send-button.stop-button {
+  background-color: #d32f2f; /* 使用红色来表示停止 */
+}
+
+.stop-icon {
+  width: 28rpx;
+  height: 28rpx;
+}
+
+/* 禁用状态的输入框 */
+.message-input[disabled] {
+  background-color: #f8f8f8;
+  color: #999;
+}
+
 /* 推荐卡片样式 */
 .recommendation-cards {
   margin-top: 12rpx;

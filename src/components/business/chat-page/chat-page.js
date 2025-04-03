@@ -40,7 +40,9 @@ Component({
     currentRequestId: null, // 用于识别响应是否属于当前请求
     storageKey: '', // 存储消息的键名
     resultStorageKey: '', // 存储结果数据的键名
-    requestStatusKey: '' // 存储请求状态的键名
+    requestStatusKey: '', // 存储请求状态的键名
+    isStopping: false, // 标记请求取消中状态
+    requestTask: null // 存储当前请求任务，用于取消
   },
 
   lifetimes: {
@@ -112,7 +114,13 @@ Component({
   methods: {
     // 发送消息
     sendMessage: function() {
-      if (!this.data.inputValue.trim() || this.data.loading) return;
+      // 如果正在加载状态，则尝试停止请求
+      if (this.data.loading) {
+        this.stopRequest();
+        return;
+      }
+      
+      if (!this.data.inputValue.trim()) return;
       
       const userMessage = {
         id: Date.now().toString(),
@@ -194,8 +202,8 @@ Component({
       // 将当前状态保存到本地存储
       this.saveMessagesToStorage();
       
-      // 发送请求
-      wx.request({
+      // 发送请求并保存请求任务引用
+      const requestTask = wx.request({
         url: apiConfig.url,
         method: apiConfig.method || 'POST',
         header: {
@@ -206,6 +214,12 @@ Component({
         timeout: 180000, // 180秒超时（3分钟）
         responseType: 'text', // 确保返回文本而不是JSON，因为SSE是文本格式
         success: (res) => {
+          // 如果已被停止，则不处理响应
+          if (this.data.isStopping) {
+            console.log('请求已手动停止，忽略响应');
+            return;
+          }
+          
           console.log("API响应完整数据:", JSON.stringify(res));
           
           // 检查这个响应是否是最新的请求
@@ -227,6 +241,12 @@ Component({
           });
         },
         fail: (error) => {
+          // 如果是主动取消，不显示错误消息
+          if (this.data.isStopping) {
+            console.log('请求已手动停止，不显示错误');
+            return;
+          }
+          
           console.error('API请求失败:', error);
           
           // 检查这个响应是否是最新的请求
@@ -262,13 +282,18 @@ Component({
           });
         },
         complete: () => {
-          // 确保请求完成后总是取消加载状态
-          if (this.data.loading) {
-            this.setData({
-              loading: false
-            });
-          }
+          // 确保请求完成后总是取消加载状态，并重置停止标志
+          this.setData({
+            loading: false,
+            isStopping: false,
+            requestTask: null
+          });
         }
+      });
+      
+      // 保存请求任务引用，以便可以取消
+      this.setData({
+        requestTask: requestTask
       });
     },
 
@@ -1387,6 +1412,37 @@ Component({
         } catch (err) {
           console.error('记录工具使用失败:', err);
         }
+      }
+    },
+
+    // 新增：停止请求
+    stopRequest: function() {
+      // 检查是否有活跃的请求
+      if (this.data.requestTask && this.data.loading) {
+        console.log('正在取消请求...');
+        
+        // 设置停止中状态
+        this.setData({
+          isStopping: true
+        });
+        
+        // 中止请求
+        this.data.requestTask.abort();
+        
+        // 添加系统消息
+        this.addSystemMessage('请求已停止');
+        
+        // 重置状态
+        this.setData({
+          loading: false,
+          requestTask: null
+        });
+        
+        // 清除请求状态
+        wx.removeStorage({ 
+          key: this.requestStatusKey,
+          success: () => console.log('请求已手动停止，状态已清除')
+        });
       }
     }
   }
