@@ -20,7 +20,41 @@
           </view>
           <view class="message-content">
             <view class="message-text" bindlongpress="copyMessageText" data-content="{{item.content}}">
-              <rich-text nodes="{{textFormat.formatBoldText(item.content)}}"></rich-text>
+              <!-- 普通消息显示 -->
+              <block wx:if="{{!item.isProjectCard}}">
+                <rich-text nodes="{{textFormat.formatText(item.content)}}" decode="true" class="normal-message-text"></rich-text>
+              </block>
+              <!-- 项目/载体卡片显示 -->
+              <block wx:else>
+                <view class="project-card">
+                  <view class="card-title">{{item.cardData.title}}</view>
+                  
+                  <block wx:if="{{item.cardData.publishTime}}">
+                    <view class="card-info">
+                      <rich-text nodes="{{textFormat.formatText('**发布时间**')}}" class="info-label"></rich-text>
+                      <text class="info-value">{{item.cardData.publishTime}}</text>
+                    </view>
+                  </block>
+                  
+                  <block wx:if="{{item.cardData.details}}">
+                    <view class="card-info">
+                      <rich-text nodes="{{textFormat.formatText(item.cardData.detailsLabel || '**项目详情**')}}" class="info-label"></rich-text>
+                      <view class="info-value">
+                        <rich-text nodes="{{textFormat.formatText(item.cardData.details)}}"></rich-text>
+                      </view>
+                    </view>
+                  </block>
+                  
+                  <block wx:if="{{item.cardData.reason}}">
+                    <view class="card-info">
+                      <rich-text nodes="{{textFormat.formatText(item.cardData.reasonLabel || '**推荐理由**')}}" class="info-label"></rich-text>
+                      <view class="info-value">
+                        <rich-text nodes="{{textFormat.formatText(item.cardData.reason)}}"></rich-text>
+                      </view>
+                    </view>
+                  </block>
+                </view>
+              </block>
             </view>
             <view class="message-time">{{item.time}}</view>
             <view wx:if="{{item.isAction}}" class="action-button" catchtap="onActionTap" data-content="{{item.content}}">
@@ -81,17 +115,88 @@
 </view> 
 
 <wxs module="textFormat">
-  function formatBoldText(text) {
-    // 处理"✦"符号包围的文本，将其包装在text标签中以应用加粗样式
-    return text.split('✦').map(function(part, i) {
-      // 偶数索引(0, 2, 4...)是普通文本，奇数索引(1, 3, 5...)是应该加粗的文本
-      if (i % 2 === 1) {
-        return '<text class="bold-text">' + part + '</text>';
-      }
-      return part;
-    }).join('');
+  function formatText(text) {
+    if (!text) return text;
+    
+    var result = text;
+    
+    // 处理分割线 --- 和 ---### 以及单独的 ### 符号
+    var splitLineRegex = getRegExp("---###?|---|###", "g");
+    result = result.replace(splitLineRegex, ''); // 移除分隔符，不留下任何痕迹
+    
+    // 首先处理加粗斜体，因为它包含三个星号
+    result = handleBoldItalic(result);
+    
+    // 然后处理加粗，包含两个星号
+    result = handleBold(result);
+    
+    // 最后处理斜体，包含一个星号
+    result = handleItalic(result);
+    
+    return result;
   }
+  
+  // 处理加粗斜体 ***text***
+  function handleBoldItalic(text) {
+    // 使用特定技术来避免正则表达式的限制
+    var parts = text.split('***');
+    if (parts.length <= 1) return text; // 没有加粗斜体标记
+    
+    var result = parts[0];
+    for (var i = 1; i < parts.length; i++) {
+      if (i % 2 === 1) {
+        // 奇数部分是要加粗斜体的文本
+        result += '<span style="font-weight: bold; font-style: italic;">' + parts[i] + '</span>';
+      } else {
+        // 偶数部分是普通文本
+        result += parts[i];
+      }
+    }
+    
+    return result;
+  }
+  
+  // 处理加粗 **text**
+  function handleBold(text) {
+    var parts = text.split('**');
+    if (parts.length <= 1) return text; // 没有加粗标记
+    
+    var result = parts[0];
+    for (var i = 1; i < parts.length; i++) {
+      if (i % 2 === 1) {
+        // 奇数部分是要加粗的文本
+        result += '<span style="font-weight: bold;">' + parts[i] + '</span>';
+      } else {
+        // 偶数部分是普通文本
+        result += parts[i];
+      }
+    }
+    
+    return result;
+  }
+  
+  // 处理斜体 *text*
+  function handleItalic(text) {
+    var parts = text.split('*');
+    if (parts.length <= 1) return text; // 没有斜体标记
+    
+    var result = parts[0];
+    for (var i = 1; i < parts.length; i++) {
+      if (i % 2 === 1) {
+        // 奇数部分是要斜体的文本
+        result += '<span style="font-style: italic;">' + parts[i] + '</span>';
+      } else {
+        // 偶数部分是普通文本
+        result += parts[i];
+      }
+    }
+    
+    return result;
+  }
+  
   module.exports = {
-    formatBoldText: formatBoldText
+    formatText: formatText,
+    formatMarkdown: function(text) { return []; }, // 保留但不使用
+    formatBoldText: function(text) { return text; } // 保留但不使用
   };
 </wxs> 

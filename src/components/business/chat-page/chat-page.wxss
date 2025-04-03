@@ -108,10 +108,85 @@
   position: relative;
 }
 
+/* 普通文本样式 */
+.normal-text {
+  display: inline;
+}
+
 /* 加粗文本样式 */
 .bold-text {
   font-weight: bold;
   display: inline;
+}
+
+/* 斜体文本样式 */
+.italic-text {
+  font-style: italic;
+  display: inline;
+}
+
+/* 加粗斜体文本样式 */
+.bold-italic-text {
+  font-weight: bold;
+  font-style: italic;
+  display: inline;
+}
+
+/* 代码文本样式 */
+.code-text {
+  font-family: monospace;
+  background-color: #f0f0f0;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+  color: #c7254e;
+  font-size: 26rpx;
+  display: inline;
+}
+
+/* 下划线文本样式 */
+.underline-text {
+  text-decoration: underline;
+  display: inline;
+}
+
+/* 标题样式 */
+.heading-1 {
+  font-size: 40rpx;
+  font-weight: bold;
+  margin: 20rpx 0;
+  color: #333;
+}
+
+.heading-2 {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin: 16rpx 0;
+  color: #333;
+}
+
+.heading-3 {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin: 12rpx 0;
+  color: #333;
+}
+
+/* 列表项样式 */
+.list-item {
+  padding-left: 20rpx;
+  margin: 8rpx 0;
+}
+
+.ordered-list-item {
+  padding-left: 20rpx;
+  margin: 8rpx 0;
+  position: relative;
+}
+
+.ordered-list-item::before {
+  content: attr(data-index) ".";
+  position: absolute;
+  left: -20rpx;
 }
 
 .message-text:active {
@@ -319,4 +394,60 @@
   font-size: 26rpx;
   color: #666;
   line-height: 1.4;
+}
+
+/* 项目/载体卡片样式 */
+.project-card {
+  background-color: #f7f9fc;
+  border: 1px solid #e0e5eb;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-top: 8rpx;
+  margin-bottom: 8rpx;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #1976D2;
+  margin-bottom: 18rpx;
+  border-bottom: 1px solid #e0e5eb;
+  padding-bottom: 12rpx;
+}
+
+.card-info {
+  margin: 14rpx 0;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px dashed #e0e5eb;
+  padding-bottom: 12rpx;
+}
+
+.normal-message-text {
+  display: inline-block;
+  width: 100%;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: #555;
+  margin-bottom: 8rpx;
+  font-weight: 500;
+  display: block;
+}
+
+.info-label .bold-text {
+  font-weight: bold;
+  color: #444;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #333;
+  padding-left: 12rpx;
+  line-height: 1.6;
+  word-break: break-all;
+  white-space: pre-wrap;
+  display: block;
 } 

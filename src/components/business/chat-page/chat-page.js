@@ -620,11 +620,57 @@ Component({
     // 添加系统消息
     addSystemMessage: function(content) {
       // 处理消息格式化
-      const { formattedContent, recommendations } = this.formatMessageContent(
+      const { formattedContent, recommendations, messageParts } = this.formatMessageContent(
         content,
         this.properties.toolConfig.type
       );
       
+      // 检查是否有拆分的消息部分
+      if (messageParts && messageParts.length > 0) {
+        // 如果有拆分的消息部分，分别添加每个部分作为独立消息
+        messageParts.forEach(part => {
+          if (part.type === 'text') {
+            // 文本类型消息
+            const message = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+              type: 'system',
+              content: part.content,
+              time: this.formatTime(new Date())
+            };
+            
+            this.setData({
+              messages: [...this.data.messages, message],
+              scrollToView: 'msg_' + message.id
+            });
+          } else if (part.type === 'card') {
+            // 卡片类型消息
+            const message = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+              type: 'system',
+              content: part.fullContent, // 完整内容用于复制
+              time: this.formatTime(new Date()),
+              isProjectCard: true, // 标记为项目卡片
+              cardData: {
+                title: part.title,
+                publishTime: part.publishTime,
+                details: part.details,
+                reason: part.reason
+              }
+            };
+            
+            this.setData({
+              messages: [...this.data.messages, message],
+              scrollToView: 'msg_' + message.id
+            });
+          }
+        });
+        
+        // 保存消息到本地存储
+        this.saveMessagesToStorage();
+        return;
+      }
+      
+      // 如果没有拆分的消息部分，按原来的逻辑处理
       const message = {
         id: Date.now().toString(),
         type: 'system',
@@ -637,28 +683,82 @@ Component({
         messages: [...this.data.messages, message],
         scrollToView: 'msg_' + message.id
       });
+      
+      // 保存消息到本地存储
+      this.saveMessagesToStorage();
     },
     
     // 添加系统消息（支持指定时间）
     addSystemMessageWithTime: function(content, timestamp) {
       // 处理消息格式化
-      const { formattedContent, recommendations } = this.formatMessageContent(
+      const { formattedContent, recommendations, messageParts } = this.formatMessageContent(
         content,
         this.properties.toolConfig.type
       );
       
+      const formattedTime = this.formatTime(timestamp || new Date());
+      
+      // 检查是否有拆分的消息部分
+      if (messageParts && messageParts.length > 0) {
+        // 如果有拆分的消息部分，分别添加每个部分作为独立消息
+        messageParts.forEach(part => {
+          if (part.type === 'text') {
+            // 文本类型消息
+            const message = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+              type: 'system',
+              content: part.content,
+              time: formattedTime
+            };
+            
+            this.setData({
+              messages: [...this.data.messages, message],
+              scrollToView: 'msg_' + message.id
+            });
+          } else if (part.type === 'card') {
+            // 卡片类型消息
+            const message = {
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+              type: 'system',
+              content: part.fullContent, // 完整内容用于复制
+              time: formattedTime,
+              isProjectCard: true, // 标记为项目卡片
+              cardData: {
+                title: part.title,
+                publishTime: part.publishTime,
+                details: part.details,
+                reason: part.reason
+              }
+            };
+            
+            this.setData({
+              messages: [...this.data.messages, message],
+              scrollToView: 'msg_' + message.id
+            });
+          }
+        });
+        
+        // 保存消息到本地存储
+        this.saveMessagesToStorage();
+        return;
+      }
+      
+      // 如果没有拆分的消息部分，按原来的逻辑处理
       const message = {
         id: Date.now().toString(),
         type: 'system',
         content: formattedContent, // 使用处理后的内容
         recommendations: recommendations,
-        time: this.formatTime(timestamp || new Date())
+        time: formattedTime
       };
       
       this.setData({
         messages: [...this.data.messages, message],
         scrollToView: 'msg_' + message.id
       });
+      
+      // 保存消息到本地存储
+      this.saveMessagesToStorage();
     },
 
     // 格式化时间
@@ -956,24 +1056,176 @@ Component({
     formatMessageContent(content, toolType) {
       const result = {
         formattedContent: content,
-        recommendations: []
+        recommendations: [],
+        // 新增字段，用于存储需要单独显示的消息部分
+        messageParts: []
       };
       
-      // 处理文本中的Markdown加粗语法 - 在内容中直接替换文本
+      // Log the original content received by the function
+      console.log("[formatMessageContent] Original content:", content);
+
+      // 直接使用原始文本，不再替换Markdown格式
       let formattedText = content;
-      
-      // 处理标准Markdown加粗 **文本**
-      if (formattedText.includes('**')) {
-        formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '✦$1✦');
-      }
       
       // 已经更新了formattedText，赋值给结果
       result.formattedContent = formattedText;
       
-      // 仅针对找项目和找载体处理推荐卡片
-      if ((toolType === 'findProject' || toolType === 'findVenue') && content.includes('推荐')) {
+      // 仅针对找项目和找载体处理推荐卡片和消息拆分
+      if (toolType === 'findProject' || toolType === 'findVenue') {
         try {
-          // 使用正则表达式提取推荐方案
+          // 新增逻辑：检测并拆分包含多个方案的消息
+          // 检查是否包含"方案1"、"方案2"、"方案3"的模式
+          const hasMultipleSchemes = content.includes('方案1') && (content.includes('方案2') || content.includes('方案3'));
+
+          if (hasMultipleSchemes) {
+            // 前言部分：从开始到第一个"方案1"前
+            const schemeStartIndex = content.indexOf('方案1');
+            if (schemeStartIndex > 0) {
+              const preface = content.substring(0, schemeStartIndex).trim();
+              if (preface) {
+                // 移除可能存在的###符号
+                const cleanedPreface = preface.replace(/###/g, '').trim();
+                console.log("[formatMessageContent] Preface:", cleanedPreface);
+                result.messageParts.push({
+                  type: 'text',
+                  content: cleanedPreface
+                });
+              }
+            }
+
+            // 提取各个方案，使用改进的正则表达式
+            const schemeRegex = /方案(\d+)[：:]\s*([^\n]+)(?:\n|$)([\s\S]*?)(?=(?:方案\d+[：:])|(?:注[：:])|(?:---)|$)/g;
+            let match;
+            let lastIndex = 0;
+
+            console.log("[formatMessageContent] Start extracting schemes...");
+
+            while ((match = schemeRegex.exec(content)) !== null) {
+              const schemeNumber = match[1];
+              const schemeTitle = match[2].trim();
+              let schemeContent = match[3] ? match[3].trim() : '';
+
+              console.log(`[formatMessageContent] Scheme ${schemeNumber} Title (raw):`, schemeTitle);
+              console.log(`[formatMessageContent] Scheme ${schemeNumber} Content (raw):\\n${schemeContent}`);
+
+              lastIndex = match.index + match[0].length;
+
+              // 提取方案详细信息
+              let publishTime = '';
+              let details = '';
+              let reason = '';
+
+              // 提取发布时间 - 调整正则以匹配 "**发布时间**" 并使冒号可选
+              const timeMatch = schemeContent.match(/\*\*发布时间\*\*[：:]?\s*([^\n]+)/);
+              console.log(`[formatMessageContent] Scheme ${schemeNumber} - Time Match Result:`, timeMatch);
+              if (timeMatch && timeMatch[1]) { 
+                publishTime = timeMatch[1].trim();
+                console.log(`[formatMessageContent] Scheme ${schemeNumber} - Extracted Publish Time:`, publishTime);
+              }
+
+              // 提取项目/载体详情 - 调整正则以匹配 "**项目详情**" 或 "**详情**" 或 "**载体详情**"
+              const detailsRegex = /\*\*(?:项目详情|详情|载体详情)\*\*(?:[：:]|\s*)?([\s\S]*?)(?=\*\*(?:推荐理由|匹配原因|发布时间)\*\*|$)/;
+              const detailsMatch = schemeContent.match(detailsRegex);
+              console.log(`[formatMessageContent] Scheme ${schemeNumber} - Details Match Result:`, detailsMatch);
+              if (detailsMatch && detailsMatch[1]) {
+                details = detailsMatch[1].trim();
+                console.log(`[formatMessageContent] Scheme ${schemeNumber} - Extracted Details:`, details.substring(0, 100) + (details.length > 100 ? '...' : ''));
+              }
+
+              // 提取推荐理由 - 调整正则以匹配 "**推荐理由**" 或 "**匹配原因**"
+              const reasonRegex = /\*\*(?:推荐理由|匹配原因)\*\*(?:[：:]|\s*)?([\s\S]*?)(?=\*\*(?:发布时间|项目详情|详情|载体详情)\*\*|$)/;
+              const reasonMatch = schemeContent.match(reasonRegex);
+              console.log(`[formatMessageContent] Scheme ${schemeNumber} - Reason Match Result:`, reasonMatch);
+              if (reasonMatch && reasonMatch[1]) {
+                reason = reasonMatch[1].trim();
+                console.log(`[formatMessageContent] Scheme ${schemeNumber} - Extracted Reason:`, reason.substring(0, 100) + (reason.length > 100 ? '...' : ''));
+              }
+
+              // 创建方案卡片，保留原始的加粗标记
+              const cardData = {
+                // 去除标题末尾可能的**但保留其他加粗
+                title: `方案${schemeNumber}: ${schemeTitle.replace(/\*\*$/, '').trim()}`,
+                // 保留发布时间的标签，使用原始格式
+                publishTime: publishTime ? publishTime.trim() : '',
+                // 保留详情标签
+                detailsLabel: "**项目详情**",
+                details: details ? details.trim() : '',
+                // 保留推荐理由标签
+                reasonLabel: "**推荐理由**",
+                reason: reason ? reason.trim() : ''
+              };
+
+              // Log the final cardData object
+              console.log(`[formatMessageContent] Scheme ${schemeNumber} - Final cardData:`, JSON.stringify(cardData));
+
+              result.messageParts.push({
+                type: 'card',
+                title: cardData.title,
+                publishTime: cardData.publishTime,
+                detailsLabel: cardData.detailsLabel,
+                details: cardData.details,
+                reasonLabel: cardData.reasonLabel,
+                reason: cardData.reason,
+                fullContent: `方案${schemeNumber}: ${schemeTitle}\\n${
+                  cardData.publishTime ? `发布时间: ${cardData.publishTime}\\n` : ''
+                }${
+                  cardData.details ? `详情: ${cardData.details}\\n` : ''
+                }${
+                  cardData.reason ? `推荐理由: ${cardData.reason}` : ''
+                }`
+              });
+            }
+
+            // 提取完所有方案后，找后记部分
+            if (lastIndex > 0) {
+              console.log('[formatMessageContent] Start searching for postscript, lastIndex =', lastIndex);
+
+              // 尝试查找各种可能的后记标记
+              const noteMarkers = ['注：', '注:', '提示：', '提示:', '请注意：', '请注意:', '备注：', '备注:', '友情提示：', '友情提示:'];
+              let postscript = '';
+              let markerFound = false;
+
+              // 按优先级顺序检查各种标记
+              for (const marker of noteMarkers) {
+                // 从最后处理的位置开始查找
+                const noteIndex = content.indexOf(marker, lastIndex);
+                if (noteIndex !== -1) {
+                  postscript = content.substring(noteIndex).trim();
+                  console.log(`[formatMessageContent] Postscript found (${marker}):`, postscript.substring(0, 100) + (postscript.length > 100 ? '...' : ''));
+                  markerFound = true;
+                  break;
+                }
+              }
+
+              // 如果找到了后记内容
+              if (markerFound && postscript) {
+                // 移除可能存在的###符号
+                const cleanedPostscript = postscript.replace(/###/g, '').trim();
+                result.messageParts.push({
+                  type: 'text',
+                  content: cleanedPostscript
+                });
+              } else if (lastIndex < content.length) {
+                // 如果没有找到明确的后记标记，但有未处理的内容
+                const remainingContent = content.substring(lastIndex).trim();
+                // 移除可能的分隔符和###符号
+                const cleanedContent = remainingContent.replace(/^---+.*$/gm, '').replace(/###/g, '').trim();
+                if (cleanedContent) {
+                  console.log('[formatMessageContent] No explicit postscript marker found, using cleaned remaining content:', cleanedContent.substring(0, 100) + (cleanedContent.length > 100 ? '...' : ''));
+                  result.messageParts.push({
+                    type: 'text',
+                    content: cleanedContent
+                  });
+                }
+              }
+            }
+
+            // 如果成功拆分了消息，将原始内容清空，避免重复显示
+            if (result.messageParts.length > 0) {
+              result.formattedContent = '';
+            }
+          } else {
+            // 保留原来的推荐卡片处理逻辑
           const recommendations = [];
           
           // 尝试查找推荐块 - 匹配不同的推荐标题格式
@@ -1024,13 +1276,14 @@ Component({
                       title: '推荐方案',
                       content: recItem
                     });
-                  }
                 }
               }
             }
           }
           
           result.recommendations = recommendations;
+            }
+          }
         } catch (err) {
           console.error('解析推荐内容时出错:', err);
         }
