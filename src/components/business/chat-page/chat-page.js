@@ -41,8 +41,12 @@ Component({
     storageKey: '', // 存储消息的键名
     resultStorageKey: '', // 存储结果数据的键名
     requestStatusKey: '', // 存储请求状态的键名
+    backgroundJobKey: '', // 存储后台任务状态的键名
     isStopping: false, // 标记请求取消中状态
-    requestTask: null // 存储当前请求任务，用于取消
+    requestTask: null, // 存储当前请求任务，用于取消
+    isBackgroundProcessing: false, // 标记是否有后台处理中的任务
+    hasNewResponse: false, // 标记是否有新响应但页面未展示
+    pageVisible: true // 标记页面是否可见
   },
 
   lifetimes: {
@@ -55,9 +59,13 @@ Component({
       this.storageKey = `chat_messages_${toolId}`;
       this.resultStorageKey = `chat_result_${toolId}`;
       this.requestStatusKey = `request_status_${toolId}`;
+      this.backgroundJobKey = `background_job_${toolId}`;
       
       // 检查是否有未完成的请求
       this.checkPendingRequests();
+      
+      // 检查是否有后台任务完成但未显示的消息
+      this.checkBackgroundJobs();
       
       // 尝试从存储中恢复消息和结果数据
       this.loadMessagesFromStorage();
@@ -66,6 +74,9 @@ Component({
       if (this.data.messages.length === 0) {
         this.addSystemMessage(this.properties.toolConfig.welcomeMessage);
       }
+      
+      // 初始化页面可见性状态
+      this.pageVisible = true;
     },
     
     ready: function() {
@@ -100,7 +111,18 @@ Component({
   },
 
   pageLifetimes: {
+    show: function() {
+      // 页面显示时，将页面可见性标记为true
+      this.pageVisible = true;
+      
+      // 页面显示时，检查是否有后台任务完成
+      this.checkBackgroundJobs();
+    },
+    
     hide: function() {
+      // 页面隐藏时，将页面可见性标记为false
+      this.pageVisible = false;
+      
       // 页面隐藏时保存状态
       this.saveMessagesToStorage();
     },
@@ -112,6 +134,210 @@ Component({
   },
 
   methods: {
+    // 检查后台任务状态
+    checkBackgroundJobs: function() {
+      try {
+        const backgroundJob = wx.getStorageSync(this.backgroundJobKey);
+        console.log('检查后台任务状态:', backgroundJob ? '找到任务' : '无任务');
+        
+        if (backgroundJob && backgroundJob.completed) {
+          console.log('发现已完成的后台任务:', backgroundJob);
+          console.log('任务响应内容类型:', typeof backgroundJob.response);
+          console.log('任务响应内容预览:', typeof backgroundJob.response === 'string' ? 
+                    backgroundJob.response.substring(0, 100) + (backgroundJob.response.length > 100 ? '...' : '') : 
+                    '非字符串内容');
+          
+          // 添加AI响应消息
+          if (backgroundJob.response) {
+            // 确保response是字符串
+            let responseContent = backgroundJob.response;
+            if (typeof responseContent !== 'string') {
+              try {
+                responseContent = JSON.stringify(responseContent);
+                console.log('将非字符串响应转换为JSON字符串');
+              } catch (e) {
+                responseContent = '收到响应，但格式无法显示';
+                console.error('响应内容无法转换为字符串:', e);
+              }
+            }
+            
+            // 检查是否是系统格式消息
+            if (responseContent && responseContent.trim().startsWith('{') && responseContent.trim().endsWith('}')) {
+              try {
+                const jsonData = JSON.parse(responseContent);
+                // 如果是系统格式消息(如generate_answer_finish)，不显示
+                if (jsonData.msg_type === 'generate_answer_finish') {
+                  console.warn('检测到系统格式消息，尝试从原始响应中提取用户内容');
+                  
+                  // 尝试从原始响应中提取用户可读内容
+                  if (backgroundJob.originalResponse) {
+                    console.log('检测到原始SSE响应数据，提取用户内容');
+                    const events = backgroundJob.originalResponse.split('\n\n').filter(event => event.trim());
+                    let extractedContent = '';
+                    
+                    // 直接提取所有delta事件的内容
+                    for (const event of events) {
+                      if (event.includes('event: conversation.message.delta')) {
+                        const dataMatch = event.match(/data:\s*(.*)/);
+                        if (dataMatch && dataMatch[1]) {
+                          try {
+                            const eventData = JSON.parse(dataMatch[1]);
+                            if (eventData.content && typeof eventData.content === 'string') {
+                              extractedContent += eventData.content;
+                            }
+                          } catch (e) {}
+                        }
+                      }
+                    }
+                    
+                    if (extractedContent && extractedContent.length > 0) {
+                      console.log(`从原始响应中提取出${extractedContent.length}字符的用户内容`);
+                      // 使用提取的内容替代系统消息
+                      responseContent = extractedContent;
+                      this.addSystemMessage(extractedContent);
+                      
+                      // 找到最后一条用户消息并记录对话
+                      const lastUserMessage = this.findLastUserMessage();
+                      if (lastUserMessage) {
+                        this.recordChatConversation(lastUserMessage.content, extractedContent);
+                        console.log('已记录对话历史');
+                      }
+                      
+                      // 继续处理结果数据部分
+                      if (backgroundJob.resultData) {
+                        this.setData({
+                          resultData: backgroundJob.resultData
+                        });
+                        
+                        // 其余逻辑不变...
+                      }
+                      
+                      // 重置状态并清除任务
+                      this.setData({
+                        loading: false,
+                        isBackgroundProcessing: false
+                      });
+                      
+                      // 清除后台任务状态
+                      wx.removeStorage({
+                        key: this.backgroundJobKey
+                      });
+                      
+                      return;
+                    }
+                  }
+                  
+                  console.warn('忽略系统格式消息');
+                  this.addSystemMessage('处理已完成，但未返回内容');
+                  // 重置状态
+                  this.setData({
+                    loading: false,
+                    isBackgroundProcessing: false
+                  });
+                  // 清除后台任务状态
+                  wx.removeStorage({
+                    key: this.backgroundJobKey
+                  });
+                  return;
+                }
+              } catch (e) {
+                console.log('响应不是有效的JSON格式，保留原始内容');
+              }
+            }
+            
+            // 添加系统消息
+            this.addSystemMessage(responseContent);
+            
+            // 找到最后一条用户消息
+            const lastUserMessage = this.findLastUserMessage();
+            if (lastUserMessage) {
+              // 记录对话到聊天历史
+              this.recordChatConversation(lastUserMessage.content, responseContent);
+              console.log('已记录对话历史');
+            }
+            
+            // 重置加载和处理状态
+            this.setData({
+              loading: false,
+              isBackgroundProcessing: false
+            });
+            
+            // 如果有结构化数据，则处理
+            if (backgroundJob.resultData) {
+              this.setData({
+                resultData: backgroundJob.resultData
+              });
+              
+              // 保存结果数据
+              wx.setStorage({
+                key: this.resultStorageKey,
+                data: backgroundJob.resultData
+              });
+              
+              // 处理结果导航逻辑
+              const { resultConfig } = this.properties.toolConfig;
+              
+              // 如果需要确认跳转到结果页
+              if (resultConfig && resultConfig.needConfirm) {
+                setTimeout(() => {
+                  this.addSystemMessage('是否查看详细的结果报告？');
+                  
+                  // 添加"查看报告"按钮
+                  const viewReportMsg = {
+                    id: Date.now().toString(),
+                    type: 'system',
+                    content: '查看详细报告',
+                    time: this.formatTime(new Date()),
+                    isAction: true
+                  };
+                  
+                  this.setData({
+                    messages: [...this.data.messages, viewReportMsg],
+                    scrollToView: 'msg_' + viewReportMsg.id
+                  });
+                  
+                  // 保存更新后的消息到本地存储
+                  this.saveMessagesToStorage();
+                }, 1000);
+              } else if (resultConfig && resultConfig.resultPage) {
+                // 直接跳转到结果页面
+                setTimeout(() => {
+                  this.navigateToResult();
+                }, 1000);
+              }
+            }
+            
+            // 清除后台任务状态
+            wx.removeStorage({
+              key: this.backgroundJobKey
+            });
+            
+            // 保存更新后的消息
+            this.saveMessagesToStorage();
+            
+            // 显示处理完成的提示
+            wx.showToast({
+              title: '处理已完成',
+              icon: 'success',
+              duration: 2000
+            });
+          }
+        } else if (backgroundJob && !backgroundJob.completed) {
+          // 标记正在后台处理
+          console.log('发现未完成的后台任务，设置处理中状态');
+          this.setData({
+            isBackgroundProcessing: true
+          });
+        }
+      } catch (error) {
+        console.error('检查后台任务状态失败:', error);
+        // 如果出现错误，重置后台处理状态
+        this.setData({
+          isBackgroundProcessing: false
+        });
+      }
+    },
+    
     // 发送消息
     sendMessage: function() {
       // 如果正在加载状态，则尝试停止请求
@@ -140,6 +366,22 @@ Component({
       // 记录工具使用
       this.recordToolUsage();
       
+      // 添加系统提示，告知用户可以离开页面
+      const processingMessage = {
+        id: Date.now().toString() + '_processing',
+        type: 'system',
+        content: '您的需求已收到，正在处理中。您可以离开此页面使用小程序的其他功能，处理完成后会通知您。',
+        time: this.formatTime(new Date())
+      };
+      
+      this.setData({
+        messages: [...this.data.messages, processingMessage],
+        scrollToView: 'msg_' + processingMessage.id
+      });
+      
+      // 保存消息到本地存储
+      this.saveMessagesToStorage();
+      
       // 调用API
       this.callAPI(userMessage.content);
     },
@@ -150,7 +392,13 @@ Component({
         messages: [],
         inputValue: '',
         loading: false,
-        resultData: null
+        resultData: null,
+        isBackgroundProcessing: false
+      });
+      
+      // 清除后台任务状态
+      wx.removeStorage({
+        key: this.backgroundJobKey
       });
       
       // 添加欢迎消息
@@ -188,15 +436,26 @@ Component({
       const requestId = Date.now().toString();
       this.currentRequestId = requestId;
       
-      // 保存请求状态到本地存储
+      // 设置后台任务状态
+      const backgroundJob = {
+        requestId: requestId,
+        timestamp: Date.now(),
+        userInput: userInput,
+        toolType: this.properties.toolConfig.type,
+        toolName: this.properties.toolConfig.title,
+        completed: false,
+        processing: true,
+        lastMessage: this.data.messages.length > 0 ? this.data.messages[this.data.messages.length - 1] : null
+      };
+      
       wx.setStorage({
-        key: this.requestStatusKey,
-        data: {
-          requestId: requestId,
-          timestamp: Date.now(),
-          userInput: userInput,
-          lastMessage: this.data.messages.length > 0 ? this.data.messages[this.data.messages.length - 1] : null
-        }
+        key: this.backgroundJobKey,
+        data: backgroundJob
+      });
+      
+      // 设置后台处理状态
+      this.setData({
+        isBackgroundProcessing: true
       });
       
       // 将当前状态保存到本地存储
@@ -211,8 +470,8 @@ Component({
           'Content-Type': 'application/json'
         },
         data: requestData,
-        timeout: 180000, // 180秒超时（3分钟）
-        responseType: 'text', // 确保返回文本而不是JSON，因为SSE是文本格式
+        timeout: 300000, // 增加到5分钟超时
+        responseType: apiConfig.responseType || 'text', // 确保返回文本而不是JSON，因为SSE是文本格式
         success: (res) => {
           // 如果已被停止，则不处理响应
           if (this.data.isStopping) {
@@ -229,10 +488,75 @@ Component({
           }
           
           // 处理API响应
-          this.handleApiResponse(res);
+          let responseContent = '';
+          let resultData = null;
           
-          // 保存更新后的消息和结果数据
-          this.saveMessagesToStorage();
+          try {
+            if (apiConfig.isSSE) {
+              // 处理SSE响应
+              const sseResult = this.handleSSEResponse(res.data, true);
+              responseContent = sseResult.message;
+              resultData = sseResult.resultData;
+              
+              // 检查是否是系统格式消息，如果是则不保存
+              if (responseContent && responseContent.trim().startsWith('{') && responseContent.trim().endsWith('}')) {
+                try {
+                  const jsonData = JSON.parse(responseContent);
+                  // 如果是系统格式消息(如generate_answer_finish)，不保存为响应内容
+                  if (jsonData.msg_type === 'generate_answer_finish') {
+                    console.warn('忽略系统格式化消息作为响应内容');
+                    
+                    // 使用handleSSEResponse提取的用户可读内容
+                    if (sseResult.userDeltaContent && sseResult.userDeltaContent.length > 0) {
+                      console.log(`使用提取的用户内容 (${sseResult.userDeltaContent.length}字符)`);
+                      responseContent = sseResult.userDeltaContent;
+                    } else {
+                      responseContent = null;
+                    }
+                  }
+                } catch (e) {
+                  console.log('响应不是有效的JSON格式，保留原始内容');
+                }
+              }
+              
+              // 如果处理后没有有效内容，直接终止
+              if (!responseContent) {
+                console.warn('没有提取到有效消息内容，取消更新后台任务');
+                return;
+              }
+            } else {
+              // 处理普通JSON响应
+              responseContent = this.extractResponseMessage(res.data);
+              resultData = this.extractResultData(res.data);
+            }
+          } catch (error) {
+            console.error('处理API响应失败:', error);
+            responseContent = '处理响应时发生错误，但已收到服务器回复。';
+          }
+          
+          // 更新后台任务状态为已完成
+          const updatedJob = {
+            ...backgroundJob,
+            completed: true,
+            processing: false,
+            timestamp: Date.now(),
+            response: responseContent || '处理完成，但未返回结果',
+            resultData: resultData,
+            originalResponse: apiConfig.isSSE ? res.data : null // 保存原始SSE响应数据
+          };
+          
+          wx.setStorage({
+            key: this.backgroundJobKey,
+            data: updatedJob
+          });
+          
+          // 如果页面当前可见，则更新UI
+          if (this.pageVisible) {
+            this.checkBackgroundJobs();
+          } else {
+            // 发送通知
+            this.sendNotification(updatedJob.toolName || '您的请求', false);
+          }
           
           // 清除请求状态
           wx.removeStorage({ 
@@ -249,328 +573,558 @@ Component({
           
           console.error('API请求失败:', error);
           
-          // 检查这个响应是否是最新的请求
-          if (this.currentRequestId !== requestId) {
-            console.log('收到旧请求的响应，忽略');
-            return;
-          }
+          // 更新后台任务状态为失败
+          const updatedJob = {
+            ...backgroundJob,
+            completed: true,
+            processing: false,
+            timestamp: Date.now(),
+            response: '很抱歉，处理您的请求时遇到了问题，请稍后再试。',
+            error: error.message || '未知错误'
+          };
           
-          // 识别超时错误并提供更清晰的消息
-          let errorMsg = JSON.stringify(error);
-          let friendlyMsg = '请求失败: ';
-          
-          if (error.errMsg && error.errMsg.includes('timeout')) {
-            friendlyMsg = '请求超时: 服务器响应时间过长，请稍后再试。';
-          } else if (error.errMsg && error.errMsg.includes('fail')) {
-            friendlyMsg = '网络错误: 无法连接到服务器，请检查网络连接后再试。';
-          }
-          
-          // 添加错误消息
-          this.addSystemMessage(friendlyMsg);
-          
-          this.setData({
-            loading: false
+          wx.setStorage({
+            key: this.backgroundJobKey,
+            data: updatedJob
           });
           
-          // 保存更新后的消息
-          this.saveMessagesToStorage();
+          // 如果页面当前可见，则更新UI
+          if (this.pageVisible) {
+            this.addSystemMessage('很抱歉，处理您的请求时遇到了问题，请稍后再试。');
+            this.setData({ loading: false, isBackgroundProcessing: false });
+          } else {
+            // 发送通知
+            this.sendNotification(updatedJob.toolName || '您的请求', true);
+          }
           
           // 清除请求状态
           wx.removeStorage({ 
             key: this.requestStatusKey,
-            success: () => console.log('请求失败，状态已清除')
-          });
-        },
-        complete: () => {
-          // 确保请求完成后总是取消加载状态，并重置停止标志
-          this.setData({
-            loading: false,
-            isStopping: false,
-            requestTask: null
+            success: () => console.log('请求已完成，状态已清除')
           });
         }
       });
       
-      // 保存请求任务引用，以便可以取消
-      this.setData({
-        requestTask: requestTask
+      // 保存请求任务引用，用于取消
+      this.setData({ 
+        requestTask 
       });
+    },
+
+    // 发送通知
+    sendNotification: function(toolName, isError = false) {
+      // 使用微信通知 API 发送通知
+      console.log(`准备发送${isError ? '错误' : '完成'}通知: ${toolName}`);
+      
+      // 消息内容
+      const title = isError ? '处理遇到问题' : '处理已完成';
+      const message = isError ? 
+        `很抱歉，${toolName}处理过程中遇到了问题，请点击查看详情。` : 
+        `${toolName}已处理完成，请点击查看结果。`;
+        
+      // 尝试使用订阅消息发送通知
+      if (wx.requestSubscribeMessage) {
+        wx.requestSubscribeMessage({
+          tmplIds: [''],  // 需要替换为有效的模板ID
+          success: (res) => {
+            console.log('订阅消息请求成功:', res);
+          },
+          fail: (err) => {
+            console.error('订阅消息请求失败:', err);
+          }
+        });
+      }
     },
 
     // 处理API响应
-    handleApiResponse: function(res) {
-      const { apiConfig, resultConfig } = this.properties.toolConfig;
-      let responseContent = '抱歉，无法处理您的请求，请稍后再试。';
-      let resultData = null;
+    handleApiResponse: function(res, isBackgroundProcessing = false) {
+      console.log("处理API响应", res);
       
-      // 如果响应是SSE格式，使用专门的SSE处理函数
-      if (apiConfig.isSSE) {
-        this.handleSSEResponse(res, resultConfig.dataKey);
-        return;
+      // 如果响应不存在或为空，直接返回
+      if (!res || !res.data) {
+        this.addSystemMessage('服务器返回了空响应');
+        return {
+          message: '服务器返回了空响应',
+          resultData: null
+        };
       }
       
-      // 如果有自定义的响应解析器，使用它
-      if (apiConfig.responseParser && typeof apiConfig.responseParser === 'function') {
-        try {
-          const parsedResult = apiConfig.responseParser(res);
-          responseContent = parsedResult.content || responseContent;
-          resultData = parsedResult.data || null;
-        } catch (e) {
-          console.error('自定义响应解析器出错:', e);
-        }
-      } else {
-        // 默认响应处理
-        if (res.statusCode === 200) {
-          if (res.data && res.data.output) {
-            responseContent = res.data.output;
-            
-            // 提取结果数据
-            if (resultConfig.dataKey && res.data[resultConfig.dataKey]) {
-              resultData = res.data[resultConfig.dataKey];
-            }
-          }
-        } else if (res.data && res.data.msg) {
-          responseContent = `API错误: ${res.data.msg}`;
-        }
+      // 处理SSE响应
+      if ((res.header && res.header['content-type'] && res.header['content-type'].includes('text/event-stream')) 
+          || (this.properties.toolConfig.apiConfig && this.properties.toolConfig.apiConfig.isSSE)) {
+        console.log("检测到SSE响应");
+        return this.handleSSEResponse(res.data, isBackgroundProcessing);
       }
       
-      // 添加系统回复消息（使用改进的消息处理）
-      this.addSystemMessage(responseContent);
-      
-      // 找到最后一条用户消息
-      const lastUserMessage = this.findLastUserMessage();
-      if (lastUserMessage) {
-        // 记录对话到聊天历史
-        this.recordChatConversation(lastUserMessage.content, responseContent);
-        console.log('已记录对话历史:', {
-          user: lastUserMessage.content.substring(0, 20) + '...',
-          ai: responseContent.substring(0, 20) + '...'
-        });
-      } else {
-        console.warn('未找到最后一条用户消息，无法记录对话历史');
-      }
-      
-      // 处理结果数据
-      if (resultData) {
-        this.setData({
-          resultData: resultData
-        });
+      // 处理常规JSON响应
+      try {
+        // 如果是字符串，尝试解析为JSON
+        let data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
         
-        // 保存结果数据到本地存储
-        wx.setStorage({
-          key: this.resultStorageKey,
-          data: resultData
-        });
+        // 提取消息内容
+        let messageContent = this.extractResponseMessage(data);
         
-        // 如果需要确认跳转到结果页
-        if (resultConfig.needConfirm) {
-          setTimeout(() => {
-            this.addSystemMessage('是否查看详细的结果报告？');
-            
-            // 添加"查看报告"按钮
-            const viewReportMsg = {
-              id: Date.now().toString(),
-              type: 'system',
-              content: '查看详细报告',
-              time: this.formatTime(new Date()),
-              isAction: true
-            };
-            
+        // 提取结构化数据（如果有）
+        let resultData = this.extractResultData(data);
+        
+        // 如果不是后台处理，则直接添加消息到界面
+        if (!isBackgroundProcessing) {
+          this.addSystemMessage(messageContent);
+          
+          // 如果有结构化数据，保存
+          if (resultData) {
             this.setData({
-              messages: [...this.data.messages, viewReportMsg],
-              scrollToView: 'msg_' + viewReportMsg.id
+              resultData: resultData
             });
             
-            // 保存更新后的消息到本地存储
-            this.saveMessagesToStorage();
-          }, 1000);
-        } else if (resultConfig.resultPage) {
-          // 直接跳转到结果页面
-          setTimeout(() => {
-            this.navigateToResult();
-          }, 1000);
+            // 保存结果数据
+            wx.setStorage({
+              key: this.resultStorageKey,
+              data: resultData
+            });
+          }
+        }
+        
+        return {
+          message: messageContent,
+          resultData: resultData
+        };
+      } catch (error) {
+        console.error('解析API响应失败:', error);
+        
+        // 如果解析失败，但响应是字符串，则显示原始字符串
+        if (typeof res.data === 'string') {
+          const message = '接收到的响应无法解析为结构化数据，显示原始内容：\n' + res.data.substring(0, 300) + (res.data.length > 300 ? '...(已截断)' : '');
+          
+          if (!isBackgroundProcessing) {
+            this.addSystemMessage(message);
+          }
+          
+          return {
+            message: message,
+            resultData: null
+          };
+        } else {
+          const message = '接收到的响应无法解析为结构化数据，且不是文本格式。';
+          
+          if (!isBackgroundProcessing) {
+            this.addSystemMessage(message);
+          }
+          
+          return {
+            message: message,
+            resultData: null
+          };
         }
       }
     },
-
-    // 处理SSE响应
-    handleSSEResponse: function(res, dataKey) {
-      let responseContent = '抱歉，无法处理您的请求，请稍后再试。';
-      let resultData = null;
-      let hasFoundData = false;
-      let hasCompletedMessage = false;
+    
+    // 处理SSE格式的响应
+    handleSSEResponse: function(sseData, isBackgroundProcessing = false) {
+      console.log("处理SSE响应");
       
-      if (res.data && typeof res.data === 'string') {
-        // 尝试解析SSE格式的响应
-        try {
-          // 按行分割SSE响应
-          const lines = res.data.split('\n');
-          let fullContent = '';
-          let foundError = false;
+      if (!sseData) {
+        const message = '接收到空的SSE响应';
+        if (!isBackgroundProcessing) {
+          this.addSystemMessage(message);
+        }
+        return {
+          message: message,
+          resultData: null
+        };
+      }
+      
+      // 用于存储完整的响应消息
+      let completeMessage = '';
+      // 用于存储有效的用户可读消息内容
+      let userReadableMessage = '';
+      // 记录是否找到了完整消息
+      let foundCompleteMessage = false;
+      // 用于存储结构化数据
+      let resultData = null;
+      // 记录是否找到错误
+      let foundError = false;
+      
+      try {
+        // 将SSE数据分割为事件
+        const events = sseData.split('\n\n').filter(event => event.trim());
+        console.log(`SSE响应包含${events.length}个事件`);
+        
+        // 提前提取所有delta事件的内容作为备用
+        let allDeltaContent = '';
+        for (const event of events) {
+          if (event.includes('event: conversation.message.delta')) {
+            const dataMatch = event.match(/data:\s*(.*)/);
+            if (dataMatch && dataMatch[1]) {
+              try {
+                const eventData = JSON.parse(dataMatch[1]);
+                if (eventData.content && typeof eventData.content === 'string') {
+                  allDeltaContent += eventData.content;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        
+        if (allDeltaContent) {
+          console.log(`预先收集到${allDeltaContent.length}字符的增量内容`);
+          userReadableMessage = allDeltaContent;
+        }
+        
+        for (const event of events) {
+          // 解析事件数据
+          const lines = event.split('\n');
+          let eventName = '';
+          let eventData = '';
           
           for (const line of lines) {
-            // 处理错误事件
-            if (line.startsWith('event: conversation.chat.failed')) {
-              foundError = true;
-              console.log('发现错误事件');
-              continue;
+            if (line.startsWith('event:')) {
+              eventName = line.substring(6).trim();
+            } else if (line.startsWith('data:')) {
+              eventData = line.substring(5).trim();
             }
-            
-            // 获取错误信息
-            if (foundError && line.startsWith('data: ')) {
-              try {
-                const errorData = JSON.parse(line.substring(6));
-                if (errorData.code && errorData.msg) {
-                  responseContent = `API错误: ${errorData.msg} (${errorData.code})`;
-                  console.error('API错误:', errorData);
-                }
-              } catch (e) {
-                console.error('解析错误信息失败:', e);
-              }
-              break;
-            }
-            
-            // 处理消息增量事件
-            if (line.startsWith('event: conversation.message.delta')) {
-              console.log('收到消息增量');
-              continue;
-            }
-            
-            // 处理消息完成事件
-            if (line.startsWith('event: conversation.message.completed')) {
-              hasCompletedMessage = true;
-              console.log('消息完成事件');
-              continue;
-            }
-            
-            // 处理需要操作事件
-            if (line.startsWith('event: conversation.chat.requires_action')) {
-              console.log('需要操作事件');
-              continue;
-            }
-            
-            // 处理常规消息数据
-            if (line.startsWith('data: ')) {
-              const data = line.substring(6);
-              try {
-                const jsonData = JSON.parse(data);
+          }
+          
+          // 记录处理的事件类型，帮助调试
+          if (eventName) {
+            console.log(`处理SSE事件: ${eventName}`);
+          }
+          
+          // 处理错误事件
+          if (eventName === 'conversation.chat.failed') {
+            foundError = true;
+            console.log('发现错误事件');
+            continue;
+          }
+          
+          // 处理消息完成事件
+          if (eventName === 'conversation.message.completed') {
+            console.log('消息完成事件');
+          }
+          
+          // 只处理有效的事件数据
+          if (eventData) {
+            try {
+              const data = JSON.parse(eventData);
+              
+              // 处理不同类型的事件
+              if (eventName === 'conversation.message.delta' && data.content) {
+                // 记录增量内容
+                console.log(`收到增量内容: ${data.content.length}字符`);
+                completeMessage += data.content;
+                // 同时更新用户可读内容
+                userReadableMessage += data.content;
+                console.log(`累积用户可读内容: ${userReadableMessage.length}字符`);
+              } else if (eventName === 'conversation.message.completed' && data.content) {
+                // 完整消息覆盖之前的增量内容
+                console.log(`收到完整消息: ${data.content.length}字符`);
                 
-                // 处理assistant的标准文本回复
-                if (jsonData.role === 'assistant' && 
-                    jsonData.type === 'answer' && 
-                    jsonData.content) {
-                  fullContent = jsonData.content;
-                  console.log('收到assistant回复:', fullContent.substring(0, 30));
-                }
-                
-                // 处理verbose类型消息，可能包含结构化数据
-                if (jsonData.role === 'assistant' && 
-                    jsonData.type === 'verbose' && 
-                    jsonData.content) {
+                // 检查新接收的内容是否为系统格式消息
+                if (data.content.trim().startsWith('{') && data.content.trim().endsWith('}')) {
                   try {
-                    const verboseData = JSON.parse(jsonData.content);
-                    console.log('verbose数据类型:', verboseData.msg_type);
-                    
-                    // 检查是否包含推荐结果数据
-                    if (verboseData.data && typeof verboseData.data === 'string') {
-                      try {
-                        if (verboseData.data.includes('projects') || verboseData.data.includes('venues')) {
-                          const parsedResultData = JSON.parse(verboseData.data);
-                          
-                          // 检查数据结构中是否包含实际数据
-                          if (parsedResultData.projects && Array.isArray(parsedResultData.projects) && parsedResultData.projects.length > 0) {
-                            resultData = parsedResultData.projects;
-                            hasFoundData = true;
-                            console.log('找到项目数据:', resultData.length);
-                          } else if (parsedResultData.venues && Array.isArray(parsedResultData.venues) && parsedResultData.venues.length > 0) {
-                            resultData = parsedResultData.venues;
-                            hasFoundData = true;
-                            console.log('找到载体数据:', resultData.length);
-                          }
-                        }
-                      } catch (e) {
-                        console.error('解析结果数据失败:', e);
-                      }
+                    const jsonData = JSON.parse(data.content);
+                    // 如果是系统格式消息且已有累积内容，不覆盖之前累积的内容
+                    if (jsonData.msg_type === 'generate_answer_finish' && userReadableMessage.length > 0) {
+                      console.log(`检测到系统格式消息，保留已累积的${userReadableMessage.length}字符用户内容`);
+                      // 不更新completeMessage和userReadableMessage，保留之前累积的内容
+                    } else {
+                      completeMessage = data.content;
+                      userReadableMessage = data.content;
+                      foundCompleteMessage = true;
+                      console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                     }
                   } catch (e) {
-                    console.error('解析verbose内容失败:', e);
+                    // 如果解析失败，则不是有效的JSON，仍然按普通内容处理
+                    completeMessage = data.content;
+                    userReadableMessage = data.content;
+                    foundCompleteMessage = true;
+                    console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                   }
+                } else {
+                  // 普通文本内容，直接覆盖
+                  completeMessage = data.content;
+                  userReadableMessage = data.content;
+                  foundCompleteMessage = true;
+                  console.log(`设置完整消息，用户可读内容长度: ${userReadableMessage.length}字符`);
                 }
-                
-                // 处理需要操作的事件数据
-                if (jsonData.status === 'requires_action' && jsonData.required_action) {
-                  console.log('需要执行操作:', jsonData.required_action);
+              } else if (eventName === 'conversation.data' && data.data) {
+                // 结构化数据
+                console.log('收到结构化数据');
+                resultData = data.data;
+              } else if (data.role === 'assistant' && data.type === 'answer' && data.content) {
+                // 处理标准回复
+                console.log('收到assistant标准回复');
+                completeMessage = data.content;
+                // 同时更新用户可读内容
+                userReadableMessage = data.content;
+                foundCompleteMessage = true;
+                console.log(`设置answer消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+              } else if (data.role === 'assistant' && data.type === 'verbose' && data.content) {
+                // 处理verbose类型消息，可能包含JSON格式数据
+                console.log('收到verbose消息');
+                try {
+                  const verboseData = JSON.parse(data.content);
+                  console.log('解析verbose数据类型:', verboseData.msg_type || 'unknown');
+                  
+                  // 忽略generate_answer_finish类型的消息，这不是真正的内容
+                  if (verboseData.msg_type === 'generate_answer_finish') {
+                    console.log('跳过generate_answer_finish类型消息');
+                    continue;
+                  }
+                  
+                  // 检查是否包含推荐结果数据
+                  if (verboseData.data && typeof verboseData.data === 'string') {
+                    try {
+                      // 检查是否包含project或venue关键词
+                      if (verboseData.data.includes('projects') || verboseData.data.includes('venues')) {
+                        const parsedResultData = JSON.parse(verboseData.data);
+                        
+                        // 检查是否包含项目数据
+                        if (parsedResultData.projects && Array.isArray(parsedResultData.projects) && parsedResultData.projects.length > 0) {
+                          resultData = parsedResultData.projects;
+                          console.log('找到项目数据:', resultData.length);
+                        } 
+                        // 检查是否包含载体数据
+                        else if (parsedResultData.venues && Array.isArray(parsedResultData.venues) && parsedResultData.venues.length > 0) {
+                          resultData = parsedResultData.venues;
+                          console.log('找到载体数据:', resultData.length);
+                        }
+                      }
+                    } catch (e) {
+                      console.warn('解析结果数据失败:', e.message);
+                    }
+                  }
+                } catch (e) {
+                  console.warn('解析verbose content失败:', e.message);
                 }
-              } catch (e) {
-                console.error('解析JSON数据失败:', e);
+              } else if (data.error) {
+                const message = `服务器返回错误: ${data.error.message || '未知错误'}`;
+                console.error('SSE错误:', message);
+                if (!isBackgroundProcessing) {
+                  this.addSystemMessage(message);
+                }
+                return {
+                  message: message,
+                  resultData: null
+                };
+              } else if (data.role === 'assistant' && data.content) {
+                // 处理其他包含content的assistant消息
+                console.log(`处理其他assistant消息`);
+                if (typeof data.content === 'string' && data.content.trim()) {
+                  completeMessage += data.content;
+                  // 同时更新用户可读内容
+                  userReadableMessage += data.content;
+                  console.log(`累积其他assistant消息，用户可读内容长度: ${userReadableMessage.length}字符`);
+                }
+              }
+            } catch (parseError) {
+              console.warn('解析事件数据JSON失败:', parseError.message);
+              console.warn('原始事件数据:', eventData.substring(0, 100) + (eventData.length > 100 ? '...' : ''));
+              
+              // 获取错误信息
+              if (foundCompleteMessage && eventData.trim()) {
+                try {
+                  const errorData = JSON.parse(eventData);
+                  if (errorData.code && errorData.msg) {
+                    const errorMessage = `API错误: ${errorData.msg} (${errorData.code})`;
+                    console.error('API错误:', errorData);
+                    if (!isBackgroundProcessing) {
+                      this.addSystemMessage(errorMessage);
+                    }
+                    return {
+                      message: errorMessage,
+                      resultData: null
+                    };
+                  }
+                } catch (e) {
+                  console.error('解析错误信息失败:', e);
+                }
+              }
+            }
+          }
+        }
+        
+        // 使用最后收集的内容
+        let finalMessage = foundCompleteMessage ? completeMessage : userReadableMessage;
+        
+        // 如果finalMessage是系统消息，直接使用预先收集的delta内容
+        if (finalMessage && finalMessage.trim().startsWith('{') && finalMessage.trim().endsWith('}')) {
+          try {
+            const jsonData = JSON.parse(finalMessage);
+            if (jsonData.msg_type === 'generate_answer_finish') {
+              console.log('最终消息是系统格式消息，使用已预先收集的增量内容');
+              if (allDeltaContent && allDeltaContent.length > 0) {
+                console.log(`使用预先收集的${allDeltaContent.length}字符内容作为最终结果`);
+                finalMessage = allDeltaContent;
+              } else {
+                return {
+                  message: '未能获取有效的回复内容',
+                  resultData: resultData
+                };
+              }
+            }
+          } catch (e) {
+            console.log('最终消息不是有效的JSON格式，保留原始内容');
+          }
+        }
+        
+        // 验证最终消息是否是系统格式消息
+        if (finalMessage && finalMessage.trim().startsWith('{') && finalMessage.trim().endsWith('}')) {
+          try {
+            const jsonData = JSON.parse(finalMessage);
+            if (jsonData.msg_type === 'generate_answer_finish') {
+              console.warn('最终消息仍然是系统格式消息，检查是否有累积内容');
+              
+              // 如果已有预先收集的delta内容
+              if (allDeltaContent && allDeltaContent.length > 0) {
+                console.log(`使用预先收集的delta内容 (${allDeltaContent.length}字符)`);
+                return {
+                  message: allDeltaContent,
+                  resultData: resultData,
+                  userDeltaContent: allDeltaContent // 传递预先收集的delta内容
+                };
+              }
+              
+              // 如果没有内容，返回默认消息
+              return {
+                message: '未能获取有效的回复内容',
+                resultData: resultData
+              };
+            }
+          } catch (e) {
+            // 如果不是有效JSON，就保留现有内容
+          }
+        }
+        
+        // 记录最终处理结果
+        console.log(`最终消息内容(${finalMessage.length}字符):`, 
+                   finalMessage.substring(0, 100) + (finalMessage.length > 100 ? '...' : ''));
+        
+        // 如果有解析到消息
+        if (finalMessage) {
+          // 找到最后一条用户消息
+          const lastUserMessage = this.findLastUserMessage();
+          if (lastUserMessage && !isBackgroundProcessing) {
+            // 记录对话到聊天历史
+            this.recordChatConversation(lastUserMessage.content, finalMessage);
+          }
+          
+          if (!isBackgroundProcessing) {
+            // 添加系统消息
+            this.addSystemMessage(finalMessage);
+            
+            // 如果有结构化数据，保存
+            if (resultData) {
+              this.setData({
+                resultData: resultData
+              });
+              
+              // 保存结果数据
+              wx.setStorage({
+                key: this.resultStorageKey,
+                data: resultData
+              });
+              
+              // 处理结果展示逻辑
+              const { resultConfig } = this.properties.toolConfig;
+              
+              // 如果需要确认跳转到结果页
+              if (resultConfig && resultConfig.needConfirm) {
+                setTimeout(() => {
+                  this.addSystemMessage('是否查看详细的结果报告？');
+                  
+                  // 添加"查看报告"按钮
+                  const viewReportMsg = {
+                    id: Date.now().toString(),
+                    type: 'system',
+                    content: '查看详细报告',
+                    time: this.formatTime(new Date()),
+                    isAction: true
+                  };
+                  
+                  this.setData({
+                    messages: [...this.data.messages, viewReportMsg],
+                    scrollToView: 'msg_' + viewReportMsg.id
+                  });
+                  
+                  // 保存更新后的消息到本地存储
+                  this.saveMessagesToStorage();
+                }, 1000);
+              } else if (resultConfig && resultConfig.resultPage) {
+                // 直接跳转到结果页面
+                setTimeout(() => {
+                  this.navigateToResult();
+                }, 1000);
               }
             }
           }
           
-          if (fullContent) {
-            responseContent = fullContent;
+          return {
+            message: finalMessage,
+            resultData: resultData,
+            userDeltaContent: allDeltaContent // 传递预先收集的delta内容
+          };
+        } else {
+          const message = '无法从服务器响应中解析出有效的消息内容';
+          if (!isBackgroundProcessing) {
+            this.addSystemMessage(message);
           }
-        } catch (e) {
-          console.error('处理SSE响应失败:', e);
+          return {
+            message: message,
+            resultData: null
+          };
         }
-      }
-      
-      // 添加系统回复消息
-      this.addSystemMessage(responseContent);
-      
-      // 找到最后一条用户消息
-      const lastUserMessage = this.findLastUserMessage();
-      if (lastUserMessage) {
-        // 记录对话到聊天历史
-        this.recordChatConversation(lastUserMessage.content, responseContent);
-      }
-      
-      const { resultConfig } = this.properties.toolConfig;
-      
-      // 如果找到了结果数据，处理结果
-      if (hasFoundData && resultData) {
-        this.setData({
-          resultData: resultData
-        });
-        
-        // 保存结果数据到本地存储
-        wx.setStorage({
-          key: this.resultStorageKey,
-          data: resultData,
-          success: () => {
-            console.log('SSE响应结果数据保存成功');
-          }
-        });
-        
-        // 如果需要确认跳转到结果页
-        if (resultConfig.needConfirm) {
-          setTimeout(() => {
-            this.addSystemMessage('是否查看详细的结果报告？');
-            
-            // 添加"查看报告"按钮
-            const viewReportMsg = {
-              id: Date.now().toString(),
-              type: 'system',
-              content: '查看详细报告',
-              time: this.formatTime(new Date()),
-              isAction: true
-            };
-            
-            this.setData({
-              messages: [...this.data.messages, viewReportMsg],
-              scrollToView: 'msg_' + viewReportMsg.id
-            });
-            
-            // 保存更新后的消息到本地存储
-            this.saveMessagesToStorage();
-          }, 1000);
-        } else if (resultConfig.resultPage) {
-          // 直接跳转到结果页面
-          setTimeout(() => {
-            this.navigateToResult();
-          }, 1000);
+      } catch (error) {
+        console.error('解析SSE响应失败:', error);
+        const message = '解析服务器响应时发生错误: ' + error.message;
+        if (!isBackgroundProcessing) {
+          this.addSystemMessage(message);
         }
+        return {
+          message: message,
+          resultData: null
+        };
       }
+    },
+    
+    // 从响应数据中提取消息内容
+    extractResponseMessage: function(data) {
+      // 根据API响应格式提取消息内容
+      if (data.message) {
+        return data.message;
+      } else if (data.content) {
+        return data.content;
+      } else if (data.response) {
+        return data.response;
+      } else if (data.assistant && data.assistant.message) {
+        return data.assistant.message;
+      } else if (data.result && data.result.message) {
+        return data.result.message;
+      } else if (data.text) {
+        return data.text;
+      } else if (typeof data === 'string') {
+        return data;
+      }
+      
+      // 如果无法提取消息，返回默认消息
+      return '收到响应，但无法提取消息内容';
+    },
+    
+    // 从响应数据中提取结构化数据
+    extractResultData: function(data) {
+      // 根据API响应格式提取结构化数据
+      if (data.data) {
+        return data.data;
+      } else if (data.result && data.result.data) {
+        return data.result.data;
+      } else if (data.structured_data) {
+        return data.structured_data;
+      } else if (data.assistant && data.assistant.data) {
+        return data.assistant.data;
+      }
+      
+      // 如果没有结构化数据，返回null
+      return null;
     },
 
     // 找到最后一条用户消息
@@ -961,28 +1515,95 @@ Component({
       }
     },
 
-    // 检查是否有未完成的请求
+    // 检查未完成的请求
     checkPendingRequests: function() {
-      wx.getStorage({
-        key: this.requestStatusKey,
-        success: (res) => {
-          if (res.data && res.data.requestId) {
-            const pendingRequest = res.data;
-            const timePassed = Date.now() - pendingRequest.timestamp;
+      try {
+        // 检查是否有未完成的请求
+        const requestStatus = wx.getStorageSync(this.requestStatusKey);
+        
+        if (requestStatus && requestStatus.requestId) {
+          console.log('检测到未完成的请求:', requestStatus);
+          
+          // 计算距离上次请求的时间（秒）
+          const elapsedSecs = Math.floor((Date.now() - requestStatus.timestamp) / 1000);
+          
+          // 如果请求时间超过3分钟（180秒），认为已超时
+          if (elapsedSecs > 180) {
+            console.log('未完成的请求已超时，清除状态');
             
-            // 如果请求发起时间在3分钟内，显示等待消息
-            if (timePassed < 180000) {
-              this.addSystemMessage('正在处理您的上一个请求，请稍候...');
-              this.setData({ loading: true });
-            } else {
-              // 如果超过3分钟，认为请求已超时
-              this.addSystemMessage('您的上一个请求似乎已超时，您可以重新发送');
-              // 清除请求状态
-              wx.removeStorage({ key: this.requestStatusKey });
-            }
+            // 清除请求状态
+            wx.removeStorage({
+              key: this.requestStatusKey
+            });
+            
+            // 添加超时消息
+            setTimeout(() => {
+              this.addSystemMessage('检测到上次请求已超时，请重试');
+            }, 500);
+          } else {
+            console.log(`未完成的请求距离现在 ${elapsedSecs} 秒，继续等待响应`);
+            
+            // 设置加载状态
+            this.setData({
+              loading: true
+            });
+            
+            // 添加等待消息
+            setTimeout(() => {
+              this.addSystemMessage(`正在继续处理您之前的请求，已等待 ${elapsedSecs} 秒...`);
+            }, 500);
           }
         }
-      });
+        
+        // 检查是否有后台任务
+        const backgroundJob = wx.getStorageSync(this.backgroundJobKey);
+        
+        if (backgroundJob && !backgroundJob.completed && backgroundJob.processing) {
+          console.log('检测到正在处理的后台任务:', backgroundJob);
+          
+          // 计算距离任务开始的时间（秒）
+          const elapsedSecs = Math.floor((Date.now() - backgroundJob.timestamp) / 1000);
+          
+          // 如果任务时间超过3分钟（180秒），认为已超时
+          if (elapsedSecs > 180) {
+            console.log('后台任务已超时，清除状态');
+            
+            // 更新任务状态为超时
+            const updatedJob = {
+              ...backgroundJob,
+              completed: true,
+              processing: false,
+              timestamp: Date.now(),
+              response: '很抱歉，处理您的请求时超时，请稍后再试。',
+              error: '处理超时'
+            };
+            
+            wx.setStorage({
+              key: this.backgroundJobKey,
+              data: updatedJob
+            });
+            
+            // 添加超时消息
+            setTimeout(() => {
+              this.addSystemMessage('检测到上次请求已超时，请重试');
+            }, 500);
+          } else {
+            console.log(`后台任务距离现在 ${elapsedSecs} 秒，继续等待处理完成`);
+            
+            // 设置后台处理状态
+            this.setData({
+              isBackgroundProcessing: true
+            });
+            
+            // 添加等待消息
+            setTimeout(() => {
+              this.addSystemMessage(`正在后台处理您的请求，已等待 ${elapsedSecs} 秒...您可以离开此页面使用其他功能，处理完成后会通知您。`);
+            }, 500);
+          }
+        }
+      } catch (e) {
+        console.error('检查未完成请求失败:', e);
+      }
     },
 
     // 清除聊天历史
@@ -1415,35 +2036,46 @@ Component({
       }
     },
 
-    // 新增：停止请求
+    // 停止当前请求
     stopRequest: function() {
-      // 检查是否有活跃的请求
-      if (this.data.requestTask && this.data.loading) {
-        console.log('正在取消请求...');
-        
-        // 设置停止中状态
-        this.setData({
-          isStopping: true
-        });
-        
-        // 中止请求
-        this.data.requestTask.abort();
-        
-        // 添加系统消息
-        this.addSystemMessage('请求已停止');
-        
-        // 重置状态
-        this.setData({
-          loading: false,
-          requestTask: null
-        });
-        
-        // 清除请求状态
-        wx.removeStorage({ 
-          key: this.requestStatusKey,
-          success: () => console.log('请求已手动停止，状态已清除')
-        });
+      if (!this.data.requestTask) {
+        console.log('没有正在进行的请求可以停止');
+        return;
       }
+      
+      console.log('尝试停止请求');
+      
+      // 设置停止标志
+      this.setData({
+        isStopping: true
+      });
+      
+      // 尝试中断请求
+      this.data.requestTask.abort();
+      
+      // 重置状态
+      this.setData({
+        loading: false,
+        isStopping: false,
+        requestTask: null,
+        isBackgroundProcessing: false
+      });
+      
+      // 添加系统消息
+      this.addSystemMessage('请求已停止');
+      
+      // 清除请求状态
+      wx.removeStorage({
+        key: this.requestStatusKey
+      });
+      
+      // 清除后台任务状态
+      wx.removeStorage({
+        key: this.backgroundJobKey
+      });
+      
+      // 保存更新后的消息
+      this.saveMessagesToStorage();
     }
   }
 }) 
